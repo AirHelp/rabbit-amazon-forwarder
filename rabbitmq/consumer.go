@@ -33,8 +33,7 @@ func (c Consumer) Name() string {
 	return c.name
 }
 
-// TODO gracefull shotdown
-// Consume consumes messages from Rabbit queue
+// Start start consuming messages from Rabbit queue
 func (c Consumer) Start(forwarder forwarder.Client, check chan bool, stop chan bool) error {
 	log.Print("Starting consumer with params: ", c)
 	conn, err := amqp.Dial(c.ConnectionURL)

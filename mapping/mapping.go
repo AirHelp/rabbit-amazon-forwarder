@@ -46,22 +46,22 @@ func New(helpers ...Helper) Client {
 
 // Load loads mappings
 func (c Client) Load() (map[consumer.Client]forwarder.Client, error) {
-	consumerForwaderMap := make(map[consumer.Client]forwarder.Client)
+	consumerForwarderMap := make(map[consumer.Client]forwarder.Client)
 	data, err := c.loadFile()
 	if err != nil {
-		return consumerForwaderMap, err
+		return consumerForwarderMap, err
 	}
 	var pairsList pairs
 	if err = json.Unmarshal(data, &pairsList); err != nil {
-		return consumerForwaderMap, err
+		return consumerForwarderMap, err
 	}
 	log.Print("Loading consumer->forwader pairs")
 	for _, pair := range pairsList {
 		consumer := c.helper.createConsumer(pair.Source)
 		forwarder := c.helper.createForwarder(pair.Destination)
-		consumerForwaderMap[consumer] = forwarder
+		consumerForwarderMap[consumer] = forwarder
 	}
-	return consumerForwaderMap, nil
+	return consumerForwarderMap, nil
 }
 
 func (c Client) loadFile() ([]byte, error) {
