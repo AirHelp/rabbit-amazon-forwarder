@@ -22,4 +22,4 @@ make release
 
 ```bash
 docker-compose up
-``
+```
