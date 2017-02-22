@@ -35,19 +35,17 @@ func (c Consumer) Name() string {
 
 // TODO gracefull shotdown
 // Consume consumes messages from Rabbit queue
-func (c Consumer) Consume(forwarder forwarder.Client) error {
+func (c Consumer) Start(forwarder forwarder.Client, check chan bool, stop chan bool) error {
 	log.Print("Starting consumer with params: ", c)
 	conn, err := amqp.Dial(c.ConnectionURL)
 	if err != nil {
 		failOnError(err, "Failed to connect to RabbitMQ")
 	}
-	// defer conn.Close()
 
 	ch, err := conn.Channel()
 	if err != nil {
 		failOnError(err, "Failed to open a channel")
 	}
-	// defer ch.Close()
 
 	err = ch.ExchangeDeclare(
 		c.ExchangeName, // name
@@ -96,20 +94,30 @@ func (c Consumer) Consume(forwarder forwarder.Client) error {
 		return failOnError(err, "Failed to register a consumer")
 	}
 
-	go c.push(msgs, forwarder)
+	go c.push(forwarder, msgs, check, stop, conn, ch)
 
 	return nil
 }
 
-func (c Consumer) push(msgs <-chan amqp.Delivery, forwarder forwarder.Client) {
+func (c Consumer) push(forwarder forwarder.Client, msgs <-chan amqp.Delivery, check chan bool, stop chan bool, conn *amqp.Connection, ch *amqp.Channel) {
 	log.Printf("[%s] Started forwarding messages to %s", c.Name(), forwarder.Name())
-	for d := range msgs {
-		log.Printf("[%s] Message to forward: %v", c.Name(), d.MessageId)
-		err := forwarder.Push(string(d.Body))
-		if err != nil {
-			log.Printf("[%s] Could not forward message. Error: %s", forwarder.Name(), err.Error())
-		} else {
-			d.Ack(true)
+	for {
+		select {
+		case d := <-msgs:
+			log.Printf("[%s] Message to forward: %v", c.Name(), d.MessageId)
+			err := forwarder.Push(string(d.Body))
+			if err != nil {
+				log.Printf("[%s] Could not forward message. Error: %s", forwarder.Name(), err.Error())
+			} else {
+				d.Ack(true)
+			}
+		case <-check:
+			log.Printf("[%s] Checking", forwarder.Name())
+		case <-stop:
+			log.Printf("[%s] Closing", forwarder.Name())
+			ch.Close()
+			conn.Close()
+			return
 		}
 	}
 }

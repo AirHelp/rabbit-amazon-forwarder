@@ -44,26 +44,24 @@ func New(helpers ...Helper) Client {
 	return Client{helper}
 }
 
-// LoadAndStart loads and starts mappings
-func (c Client) LoadAndStart() error {
+// Load loads mappings
+func (c Client) Load() (map[consumer.Client]forwarder.Client, error) {
+	consumerForwaderMap := make(map[consumer.Client]forwarder.Client)
 	data, err := c.loadFile()
 	if err != nil {
-		return err
+		return consumerForwaderMap, err
 	}
 	var pairsList pairs
 	if err = json.Unmarshal(data, &pairsList); err != nil {
-		return err
+		return consumerForwaderMap, err
 	}
-	log.Print("Starting consumer->forwader pairs")
+	log.Print("Loading consumer->forwader pairs")
 	for _, pair := range pairsList {
 		consumer := c.helper.createConsumer(pair.Source)
 		forwarder := c.helper.createForwarder(pair.Destination)
-		log.Printf("Starting consumer:%s with forwader:%s", consumer.Name(), forwarder.Name())
-		if err := consumer.Consume(forwarder); err != nil {
-			return err
-		}
+		consumerForwaderMap[consumer] = forwarder
 	}
-	return nil
+	return consumerForwaderMap, nil
 }
 
 func (c Client) loadFile() ([]byte, error) {
@@ -73,7 +71,7 @@ func (c Client) loadFile() ([]byte, error) {
 }
 
 func (h helperImpl) createConsumer(item common.Item) consumer.Client {
-	log.Print("Creating consumer: ", item.Type)
+	log.Printf("Creating consumer: [%s, %s]", item.Type, item.Name)
 	switch item.Type {
 	case rabbitmq.Type:
 		return rabbitmq.CreateConsumer(item)
@@ -82,7 +80,7 @@ func (h helperImpl) createConsumer(item common.Item) consumer.Client {
 }
 
 func (h helperImpl) createForwarder(item common.Item) forwarder.Client {
-	log.Print("Creating forwarder: ", item.Type)
+	log.Printf("Creating forwarder: [%s, %s]", item.Type, item.Name)
 	switch item.Type {
 	case sns.Type:
 		return sns.CreateForwarder(item)
