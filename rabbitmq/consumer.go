@@ -23,6 +23,16 @@ type Consumer struct {
 	RoutingKey    string
 }
 
+// parameters for starting consumer
+type workerParams struct {
+	forwarder forwarder.Client
+	msgs      <-chan amqp.Delivery
+	check     chan bool
+	stop      chan bool
+	conn      *amqp.Connection
+	ch        *amqp.Channel
+}
+
 // CreateConsumer creates conusmer from string map
 func CreateConsumer(item common.Item) consumer.Client {
 	return Consumer{item.Name, item.ConnectionURL, item.ExchangeName, item.QueueName, item.RoutingKey}
@@ -92,30 +102,31 @@ func (c Consumer) Start(forwarder forwarder.Client, check chan bool, stop chan b
 	if err != nil {
 		return failOnError(err, "Failed to register a consumer")
 	}
-
-	go c.push(forwarder, msgs, check, stop, conn, ch)
+	params := workerParams{forwarder, msgs, check, stop, conn, ch}
+	go c.push(params)
 
 	return nil
 }
 
-func (c Consumer) push(forwarder forwarder.Client, msgs <-chan amqp.Delivery, check chan bool, stop chan bool, conn *amqp.Connection, ch *amqp.Channel) {
-	log.Printf("[%s] Started forwarding messages to %s", c.Name(), forwarder.Name())
+func (c Consumer) push(params workerParams) {
+	forwarderName := params.forwarder.Name()
+	log.Printf("[%s] Started forwarding messages to %s", c.Name(), forwarderName)
 	for {
 		select {
-		case d := <-msgs:
+		case d := <-params.msgs:
 			log.Printf("[%s] Message to forward: %v", c.Name(), d.MessageId)
-			err := forwarder.Push(string(d.Body))
+			err := params.forwarder.Push(string(d.Body))
 			if err != nil {
-				log.Printf("[%s] Could not forward message. Error: %s", forwarder.Name(), err.Error())
+				log.Printf("[%s] Could not forward message. Error: %s", forwarderName, err.Error())
 			} else {
 				d.Ack(true)
 			}
-		case <-check:
-			log.Printf("[%s] Checking", forwarder.Name())
-		case <-stop:
-			log.Printf("[%s] Closing", forwarder.Name())
-			ch.Close()
-			conn.Close()
+		case <-params.check:
+			log.Printf("[%s] Checking", forwarderName)
+		case <-params.stop:
+			log.Printf("[%s] Closing", forwarderName)
+			params.ch.Close()
+			params.conn.Close()
 			return
 		}
 	}
