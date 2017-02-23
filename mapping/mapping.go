@@ -28,7 +28,7 @@ type Client struct {
 
 // Helper interface for creating consumers and forwaders
 type Helper interface {
-	createConsumer(item common.Item) consumer.Client
+	createConsumer(item common.Item) (consumer.Client, error)
 	createForwarder(item common.Item) forwarder.Client
 }
 
@@ -57,7 +57,10 @@ func (c Client) Load() (map[consumer.Client]forwarder.Client, error) {
 	}
 	log.Print("Loading consumer->forwader pairs")
 	for _, pair := range pairsList {
-		consumer := c.helper.createConsumer(pair.Source)
+		consumer, err := c.helper.createConsumer(pair.Source)
+		if err != nil {
+			return consumerForwarderMap, err
+		}
 		forwarder := c.helper.createForwarder(pair.Destination)
 		consumerForwarderMap[consumer] = forwarder
 	}
@@ -70,13 +73,13 @@ func (c Client) loadFile() ([]byte, error) {
 	return ioutil.ReadFile(filePath)
 }
 
-func (h helperImpl) createConsumer(item common.Item) consumer.Client {
+func (h helperImpl) createConsumer(item common.Item) (consumer.Client, error) {
 	log.Printf("Creating consumer: [%s, %s]", item.Type, item.Name)
 	switch item.Type {
 	case rabbitmq.Type:
 		return rabbitmq.CreateConsumer(item)
 	}
-	return nil
+	return nil, nil
 }
 
 func (h helperImpl) createForwarder(item common.Item) forwarder.Client {
