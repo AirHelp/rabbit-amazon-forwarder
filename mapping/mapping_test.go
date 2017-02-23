@@ -18,11 +18,16 @@ const (
 	snsType    = "sns"
 )
 
-func TestLoadAndStart(t *testing.T) {
+func TestLoad(t *testing.T) {
 	os.Setenv(common.MappingFile, "../tests/rabbit_to_sns.json")
 	client := New(MockMappingHelper{})
-	if err := client.LoadAndStart(); err != nil {
+	var consumerForwarderMap map[consumer.Client]forwarder.Client
+	var err error
+	if consumerForwarderMap, err = client.Load(); err != nil {
 		t.Errorf("could not load mapping and start mocked rabbit->sns pair: %s", err.Error())
+	}
+	if len(consumerForwarderMap) != 1 {
+		t.Errorf("wrong consumerForwarderMap size, expected 1, got %d", len(consumerForwarderMap))
 	}
 }
 
@@ -118,7 +123,7 @@ func (c MockRabbitConsumer) Name() string {
 	return rabbitType
 }
 
-func (c MockRabbitConsumer) Consume(forwarder.Client) error {
+func (c MockRabbitConsumer) Start(client forwarder.Client, check chan bool, stop chan bool) error {
 	return nil
 }
 

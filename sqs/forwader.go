@@ -35,8 +35,6 @@ func (f Forwarder) Name() string {
 
 // Push pushes message to forwarding infrastructure
 func (f Forwarder) Push(message string) error {
-	log.Print("Queue: ", f.queue)
-
 	params := &sqs.SendMessageInput{
 		MessageBody: aws.String(message), // Required
 		QueueUrl:    aws.String(f.queue), // Required

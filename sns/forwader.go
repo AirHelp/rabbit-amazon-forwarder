@@ -35,7 +35,6 @@ func (f Forwarder) Name() string {
 
 // Push pushes message to forwarding infrastructure
 func (f Forwarder) Push(message string) error {
-	log.Print("Topic: ", f.topic)
 	params := &sns.PublishInput{
 		Message:   aws.String(message),
 		TargetArn: aws.String(f.topic),

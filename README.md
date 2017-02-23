@@ -23,3 +23,10 @@ make release
 ```bash
 docker-compose up
 ```
+
+# Supervisor
+
+Supervisor is a module which starts the consumer->forwarder pairs.
+Exposed endpoints:
+- `APP_URL/health` - returns status if all consumers are running
+- `APP_URL/restart` - restarts all consumer->forwarder pairs
