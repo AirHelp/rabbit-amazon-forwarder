@@ -9,7 +9,7 @@ import (
 func TestCreateForwarder(t *testing.T) {
 	item := common.Item{Type: "SQS",
 		Name:          "sqs-test",
-		ConnectionURL: "",
+		ConnectionEnv: "",
 		ExchangeName:  "",
 		QueueName:     "test-queue",
 		RoutingKey:    "#"}

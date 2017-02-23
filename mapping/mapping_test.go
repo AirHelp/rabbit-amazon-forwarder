@@ -44,17 +44,36 @@ func TestLoadFile(t *testing.T) {
 }
 
 func TestCreateConsumer(t *testing.T) {
+	os.Setenv("RABBIT", "connection")
 	client := New()
 	consumerName := "test-rabbit"
 	item := common.Item{Type: "RabbitMQ",
 		Name:          consumerName,
-		ConnectionURL: "url",
+		ConnectionEnv: "RABBIT",
 		ExchangeName:  "topic",
 		QueueName:     "test-queue",
 		RoutingKey:    "#"}
-	consumer := client.helper.createConsumer(item)
+	consumer, err := client.helper.createConsumer(item)
+	if err != nil {
+		t.Error("Error occured: ", err.Error())
+	}
 	if consumer.Name() != consumerName {
 		t.Errorf("wrong consumer name, expected %s, found %s", consumerName, consumer.Name())
+	}
+}
+
+func TestCreateConsumerMissingConnectionEnv(t *testing.T) {
+	client := New()
+	consumerName := "test-rabbit"
+	item := common.Item{Type: "RabbitMQ",
+		Name:          consumerName,
+		ConnectionEnv: "connection",
+		ExchangeName:  "topic",
+		QueueName:     "test-queue",
+		RoutingKey:    "#"}
+	_, err := client.helper.createConsumer(item)
+	if err == nil {
+		t.Error("Error should occured")
 	}
 }
 
@@ -63,7 +82,7 @@ func TestCreateForwarderSNS(t *testing.T) {
 	forwarderName := "test-sns"
 	item := common.Item{Type: "SNS",
 		Name:          forwarderName,
-		ConnectionURL: "",
+		ConnectionEnv: "",
 		ExchangeName:  "topic",
 		QueueName:     "",
 		RoutingKey:    "#"}
@@ -78,7 +97,7 @@ func TestCreateForwarderSQS(t *testing.T) {
 	forwarderName := "test-sqs"
 	item := common.Item{Type: "SQS",
 		Name:          forwarderName,
-		ConnectionURL: "",
+		ConnectionEnv: "",
 		ExchangeName:  "",
 		QueueName:     "test-queue",
 		RoutingKey:    "#"}
@@ -103,11 +122,11 @@ type MockSQSForwarder struct {
 
 type ErrorForwarder struct{}
 
-func (h MockMappingHelper) createConsumer(item common.Item) consumer.Client {
+func (h MockMappingHelper) createConsumer(item common.Item) (consumer.Client, error) {
 	if item.Type != rabbitmq.Type {
-		return nil
+		return nil, errors.New("Should be invoked")
 	}
-	return MockRabbitConsumer{}
+	return MockRabbitConsumer{}, nil
 }
 func (h MockMappingHelper) createForwarder(item common.Item) forwarder.Client {
 	switch item.Type {

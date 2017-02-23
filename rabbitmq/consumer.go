@@ -1,8 +1,10 @@
 package rabbitmq
 
 import (
+	"errors"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/AirHelp/rabbit-amazon-forwarder/common"
 	"github.com/AirHelp/rabbit-amazon-forwarder/consumer"
@@ -34,8 +36,12 @@ type workerParams struct {
 }
 
 // CreateConsumer creates conusmer from string map
-func CreateConsumer(item common.Item) consumer.Client {
-	return Consumer{item.Name, item.ConnectionURL, item.ExchangeName, item.QueueName, item.RoutingKey}
+func CreateConsumer(item common.Item) (consumer.Client, error) {
+	connectionURL := os.Getenv(item.ConnectionEnv)
+	if connectionURL == "" {
+		return nil, errors.New("Missing RabbbitMQ connection environment variable: " + item.ConnectionEnv)
+	}
+	return Consumer{item.Name, connectionURL, item.ExchangeName, item.QueueName, item.RoutingKey}, nil
 }
 
 // Name consumer name
