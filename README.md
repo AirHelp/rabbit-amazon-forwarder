@@ -2,7 +2,11 @@
 
 Application to forward messages from RabbitMQ to different Amazon services.
 
-# Configuration
+## Architecture
+
+![Alt text](img/rabbit-amazon-forwarder.png?raw=true "RabbitMQ -> Amazon architecture")
+
+## Configuration
 
 Export environment variables:
 ```bash
@@ -12,19 +16,23 @@ export AWS_ACCESS_KEY_ID=access_key
 export AWS_SECRET_ACCESS_KEY=secret_key
 ```
 
-# Build
+## Mapping
+
+Definition of forwarder->consumer pairs should be placed inside mapping file. Samples are located in `tests` directory.
+
+## Build
 
 ```bash
 make release
 ```
 
-# Run
+## Run
 
 ```bash
 docker-compose up
 ```
 
-# Supervisor
+## Supervisor
 
 Supervisor is a module which starts the consumer->forwarder pairs.
 Exposed endpoints:
