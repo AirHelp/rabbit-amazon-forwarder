@@ -26,6 +26,14 @@ Definition of forwarder->consumer pairs should be placed inside mapping file. Sa
 make release
 ```
 
+# Release
+
+```bash
+make push
+docker tag airhelp/rabbit-amazon-forwarder airhelp/rabbit-amazon-forwarder:$VERSION
+docker push airhelp/rabbit-amazon-forwarder:$VERSION
+```
+
 ## Run
 
 ```bash
