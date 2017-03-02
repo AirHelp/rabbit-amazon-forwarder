@@ -1,14 +1,31 @@
 package supervisor
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/AirHelp/rabbit-amazon-forwarder/consumer"
 	"github.com/AirHelp/rabbit-amazon-forwarder/forwarder"
 )
+
+const (
+	jsonType     = "application/json"
+	success      = "success"
+	notSupported = "not supported response format"
+	acceptHeader = "Accept"
+	contentType  = "Content-Type"
+	errorRestart = "could not restart workers"
+	acceptAll    = "*/*"
+)
+
+type response struct {
+	Healthy bool   `json:"healthy"`
+	Message string `json:"message"`
+}
 
 type consumerChannel struct {
 	name  string
@@ -43,6 +60,13 @@ func (c *Client) Start() error {
 
 // Check checks running consumers
 func (c *Client) Check(w http.ResponseWriter, r *http.Request) {
+	if accept := r.Header.Get(acceptHeader); accept != "" &&
+		!strings.Contains(accept, jsonType) &&
+		!strings.Contains(accept, acceptAll) {
+		log.Print("Wrong Accept header: ", accept)
+		notAccpetableResponse(w)
+		return
+	}
 	stopped := 0
 	for _, consumer := range c.consumers {
 		if len(consumer.check) > 0 {
@@ -56,36 +80,64 @@ func (c *Client) Check(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if stopped > 0 {
-		w.WriteHeader(500)
 		message := fmt.Sprintf("Number of failed consumers: %d", stopped)
-		w.Write([]byte(message))
+		errorResponse(w, message)
 		return
 	}
-	w.WriteHeader(200)
-	w.Write([]byte("success"))
+	successResponse(w)
 }
 
 // Restart restarts every consumer
 func (c *Client) Restart(w http.ResponseWriter, r *http.Request) {
 	c.stop()
 	if err := c.Start(); err != nil {
-		w.WriteHeader(500)
-		w.Write([]byte(err.Error()))
+		log.Print(err)
+		errorResponse(w, "")
 		return
 	}
-	w.WriteHeader(200)
-	w.Write([]byte("success"))
+	successResponse(w)
 }
 
 func (c *Client) stop() {
 	for _, consumer := range c.consumers {
 		consumer.stop <- true
 	}
-
 }
 
 func makeConsumerChannel(name string) *consumerChannel {
 	check := make(chan bool)
 	stop := make(chan bool)
 	return &consumerChannel{name: name, check: check, stop: stop}
+}
+
+func errorResponse(w http.ResponseWriter, message string) {
+	w.Header().Set(contentType, jsonType)
+	w.WriteHeader(500)
+	w.Write([]byte(message))
+	return
+}
+
+func notAccpetableResponse(w http.ResponseWriter) {
+	w.Header().Set(contentType, jsonType)
+	w.WriteHeader(406)
+	bytes, err := json.Marshal(response{Healthy: false, Message: notSupported})
+	if err != nil {
+		log.Print(err)
+		w.WriteHeader(500)
+		return
+	}
+	w.Write(bytes)
+	return
+}
+
+func successResponse(w http.ResponseWriter) {
+	w.Header().Set(contentType, jsonType)
+	w.WriteHeader(200)
+	bytes, err := json.Marshal(response{Healthy: true, Message: success})
+	if err != nil {
+		log.Print(err)
+		w.WriteHeader(200)
+		return
+	}
+	w.Write(bytes)
 }
