@@ -1,6 +1,7 @@
 package supervisor
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -21,6 +22,11 @@ func TestStart(t *testing.T) {
 }
 
 func TestRestart(t *testing.T) {
+	successJSON := response{Healthy: true, Message: success}
+	sucessMessage, err := json.Marshal(successJSON)
+	if err != nil {
+		t.Error("Could not prepare response. Error: ", err.Error())
+	}
 	supervisor := New(prepareConsumers())
 	req, err := http.NewRequest("GET", "/restart", nil)
 	if err != nil {
@@ -34,30 +40,60 @@ func TestRestart(t *testing.T) {
 	if rr.Code != 200 {
 		t.Errorf("wrong status code, expected:%d, got:%d", rr.Code, 200)
 	}
-	if rr.Body.String() != "success" {
+	if rr.Body.String() != string(sucessMessage) {
 		t.Errorf("wrong response body, expected:%s, got:%v", "success", rr.Body.String())
+	}
+	if rr.Header().Get(contentType) != jsonType {
+		t.Errorf("wrong response header, expected:%s, got:%s", jsonType, rr.Header().Get(contentType))
 	}
 }
 
 func TestCheck(t *testing.T) {
+	successJSON := response{Healthy: true, Message: success}
+	sucessMessage, err := json.Marshal(successJSON)
+	if err != nil {
+		t.Error("Could not prepare response. Error: ", err.Error())
+	}
+	notAccpetedJSON := response{Healthy: false, Message: notSupported}
+	notAcceptedMessage, err := json.Marshal(notAccpetedJSON)
+	if err != nil {
+		t.Error("Could not prepare response. Error: ", err.Error())
+	}
 	supervisor := New(prepareConsumers())
-	if err := supervisor.Start(); err != nil {
+	if err = supervisor.Start(); err != nil {
 		t.Error("could not start supervised consumer->forwader pairs, error: ", err.Error())
 	}
-	req, err := http.NewRequest("GET", "/check", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(supervisor.Check)
 
-	handler.ServeHTTP(rr, req)
-
-	if rr.Code != 200 {
-		t.Errorf("wrong status code, expected:%d, got:%d", rr.Code, 200)
+	cases := []struct {
+		httpCode int
+		res      string
+		accept   string
+	}{
+		{200, string(sucessMessage), ""},
+		{200, string(sucessMessage), jsonType},
+		{200, string(sucessMessage), acceptAll},
+		{406, string(notAcceptedMessage), "plain/text"},
 	}
-	if rr.Body.String() != "success" {
-		t.Errorf("wrong response body, expected:%s, got:%v", "success", rr.Body.String())
+	for _, c := range cases {
+		req, err := http.NewRequest("GET", "/check", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Accept", c.accept)
+		rr := httptest.NewRecorder()
+		handler := http.HandlerFunc(supervisor.Check)
+
+		handler.ServeHTTP(rr, req)
+
+		if rr.Code != c.httpCode {
+			t.Errorf("wrong status code, expected:%d, got:%d", rr.Code, c.httpCode)
+		}
+		if rr.Body.String() != c.res {
+			t.Errorf("wrong response body, expected:%s, got:%s", c.res, rr.Body.String())
+		}
+		if rr.Header().Get(contentType) != jsonType {
+			t.Errorf("wrong response header, expected:%s, got:%s", jsonType, rr.Header().Get(contentType))
+		}
 	}
 }
 
