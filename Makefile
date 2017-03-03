@@ -8,7 +8,7 @@ build:
 release: build
 	docker build -t airhelp/rabbit-amazon-forwarder -f Dockerfile .
 
-push: release
+push: test release
 	docker push airhelp/rabbit-amazon-forwarder
 
 fmt:

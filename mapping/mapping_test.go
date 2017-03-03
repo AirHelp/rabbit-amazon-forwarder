@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/AirHelp/rabbit-amazon-forwarder/common"
+	"github.com/AirHelp/rabbit-amazon-forwarder/config"
 	"github.com/AirHelp/rabbit-amazon-forwarder/consumer"
 	"github.com/AirHelp/rabbit-amazon-forwarder/forwarder"
 	"github.com/AirHelp/rabbit-amazon-forwarder/rabbitmq"
@@ -19,7 +19,7 @@ const (
 )
 
 func TestLoad(t *testing.T) {
-	os.Setenv(common.MappingFile, "../tests/rabbit_to_sns.json")
+	os.Setenv(config.MappingFile, "../tests/rabbit_to_sns.json")
 	client := New(MockMappingHelper{})
 	var consumerForwarderMap map[consumer.Client]forwarder.Client
 	var err error
@@ -32,7 +32,7 @@ func TestLoad(t *testing.T) {
 }
 
 func TestLoadFile(t *testing.T) {
-	os.Setenv(common.MappingFile, "../tests/rabbit_to_sns.json")
+	os.Setenv(config.MappingFile, "../tests/rabbit_to_sns.json")
 	client := New()
 	data, err := client.loadFile()
 	if err != nil {
@@ -46,13 +46,13 @@ func TestLoadFile(t *testing.T) {
 func TestCreateConsumer(t *testing.T) {
 	client := New()
 	consumerName := "test-rabbit"
-	item := common.Item{Type: "RabbitMQ",
+	entry := config.RabbitEntry{Type: "RabbitMQ",
 		Name:          consumerName,
 		ConnectionURL: "url",
 		ExchangeName:  "topic",
 		QueueName:     "test-queue",
 		RoutingKey:    "#"}
-	consumer := client.helper.createConsumer(item)
+	consumer := client.helper.createConsumer(entry)
 	if consumer.Name() != consumerName {
 		t.Errorf("wrong consumer name, expected %s, found %s", consumerName, consumer.Name())
 	}
@@ -61,13 +61,11 @@ func TestCreateConsumer(t *testing.T) {
 func TestCreateForwarderSNS(t *testing.T) {
 	client := New(MockMappingHelper{})
 	forwarderName := "test-sns"
-	item := common.Item{Type: "SNS",
-		Name:          forwarderName,
-		ConnectionURL: "",
-		ExchangeName:  "topic",
-		QueueName:     "",
-		RoutingKey:    "#"}
-	forwarder := client.helper.createForwarder(item)
+	entry := config.AmazonEntry{Type: "SNS",
+		Name:   forwarderName,
+		Target: "arn",
+	}
+	forwarder := client.helper.createForwarder(entry)
 	if forwarder.Name() != forwarderName {
 		t.Errorf("wrong forwarder name, expected %s, found %s", forwarderName, forwarder.Name())
 	}
@@ -76,13 +74,11 @@ func TestCreateForwarderSNS(t *testing.T) {
 func TestCreateForwarderSQS(t *testing.T) {
 	client := New(MockMappingHelper{})
 	forwarderName := "test-sqs"
-	item := common.Item{Type: "SQS",
-		Name:          forwarderName,
-		ConnectionURL: "",
-		ExchangeName:  "",
-		QueueName:     "test-queue",
-		RoutingKey:    "#"}
-	forwarder := client.helper.createForwarder(item)
+	entry := config.AmazonEntry{Type: "SQS",
+		Name:   forwarderName,
+		Target: "arn",
+	}
+	forwarder := client.helper.createForwarder(entry)
 	if forwarder.Name() != forwarderName {
 		t.Errorf("wrong forwarder name, expected %s, found %s", forwarderName, forwarder.Name())
 	}
@@ -103,18 +99,18 @@ type MockSQSForwarder struct {
 
 type ErrorForwarder struct{}
 
-func (h MockMappingHelper) createConsumer(item common.Item) consumer.Client {
-	if item.Type != rabbitmq.Type {
+func (h MockMappingHelper) createConsumer(entry config.RabbitEntry) consumer.Client {
+	if entry.Type != rabbitmq.Type {
 		return nil
 	}
 	return MockRabbitConsumer{}
 }
-func (h MockMappingHelper) createForwarder(item common.Item) forwarder.Client {
-	switch item.Type {
+func (h MockMappingHelper) createForwarder(entry config.AmazonEntry) forwarder.Client {
+	switch entry.Type {
 	case sns.Type:
-		return MockSNSForwarder{item.Name}
+		return MockSNSForwarder{entry.Name}
 	case sqs.Type:
-		return MockSQSForwarder{item.Name}
+		return MockSQSForwarder{entry.Name}
 	}
 	return ErrorForwarder{}
 }

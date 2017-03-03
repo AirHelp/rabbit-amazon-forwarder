@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/AirHelp/rabbit-amazon-forwarder/common"
+	"github.com/AirHelp/rabbit-amazon-forwarder/config"
 	"github.com/AirHelp/rabbit-amazon-forwarder/consumer"
 	"github.com/AirHelp/rabbit-amazon-forwarder/forwarder"
 	"github.com/streadway/amqp"
@@ -34,8 +34,8 @@ type workerParams struct {
 }
 
 // CreateConsumer creates conusmer from string map
-func CreateConsumer(item common.Item) consumer.Client {
-	return Consumer{item.Name, item.ConnectionURL, item.ExchangeName, item.QueueName, item.RoutingKey}
+func CreateConsumer(entry config.RabbitEntry) consumer.Client {
+	return Consumer{entry.Name, entry.ConnectionURL, entry.ExchangeName, entry.QueueName, entry.RoutingKey}
 }
 
 // Name consumer name
