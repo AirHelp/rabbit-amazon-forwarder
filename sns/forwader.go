@@ -3,7 +3,7 @@ package sns
 import (
 	"log"
 
-	"github.com/AirHelp/rabbit-amazon-forwarder/common"
+	"github.com/AirHelp/rabbit-amazon-forwarder/config"
 	"github.com/AirHelp/rabbit-amazon-forwarder/forwarder"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -21,9 +21,9 @@ type Forwarder struct {
 }
 
 // CreateForwarder creates instance of forwarder
-func CreateForwarder(item common.Item) forwarder.Client {
+func CreateForwarder(entry config.AmazonEntry) forwarder.Client {
 	client := awsClient()
-	forwarder := Forwarder{item.Name, client, item.ExchangeName}
+	forwarder := Forwarder{entry.Name, client, entry.Target}
 	log.Print("Created forwarder: ", forwarder.Name())
 	return forwarder
 }
