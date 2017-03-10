@@ -43,6 +43,10 @@ Sample of RabbitMQ -> SNS mapping file. All fields are required.
 ```
 Samples are located in `examples` directory.
 
+### Amazon configuration
+
+When making subscription to SNS -> SQS/HTTP/HTTPS set `Raw message delivery` to ensure that json messages are not escaped.
+
 ## Build docker image
 
 ```bash
