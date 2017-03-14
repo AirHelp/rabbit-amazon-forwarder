@@ -39,8 +39,7 @@ func (f Forwarder) Push(message string) error {
 		MessageBody: aws.String(message), // Required
 		QueueUrl:    aws.String(f.queue), // Required
 	}
-	log.Print(params)
-	log.Print(*f.sqsClient.Config.Region)
+
 	resp, err := f.sqsClient.SendMessage(params)
 
 	if err != nil {
