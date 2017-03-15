@@ -1,4 +1,4 @@
-package sns
+package sqs
 
 import (
 	"log"
@@ -7,22 +7,22 @@ import (
 	"github.com/AirHelp/rabbit-amazon-forwarder/forwarder"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/sns"
+	"github.com/aws/aws-sdk-go/service/sqs"
 )
 
 const (
-	Type = "SNS"
+	Type = "SQS"
 )
 
 type Forwarder struct {
 	name      string
-	snsClient *sns.SNS
-	topic     string
+	sqsClient *sqs.SQS
+	queue     string
 }
 
 // CreateForwarder creates instance of forwarder
 func CreateForwarder(entry config.AmazonEntry) forwarder.Client {
-	client := awsClient()
+	client := sqs.New(session.New())
 	forwarder := Forwarder{entry.Name, client, entry.Target}
 	log.Print("Created forwarder: ", forwarder.Name())
 	return forwarder
@@ -35,21 +35,17 @@ func (f Forwarder) Name() string {
 
 // Push pushes message to forwarding infrastructure
 func (f Forwarder) Push(message string) error {
-	params := &sns.PublishInput{
-		Message:   aws.String(message),
-		TargetArn: aws.String(f.topic),
+	params := &sqs.SendMessageInput{
+		MessageBody: aws.String(message), // Required
+		QueueUrl:    aws.String(f.queue), // Required
 	}
 
-	resp, err := f.snsClient.Publish(params)
+	resp, err := f.sqsClient.SendMessage(params)
+
 	if err != nil {
 		log.Printf("[%s] Could not forward message. Error: %s", f.Name(), err.Error())
 		return err
 	}
 	log.Printf("[%s] Forward succeeded. Response: %s", f.Name(), resp)
 	return nil
-}
-
-func awsClient() *sns.SNS {
-	sess := session.New()
-	return sns.New(sess)
 }
