@@ -9,6 +9,7 @@ import (
 	"github.com/AirHelp/rabbit-amazon-forwarder/config"
 	"github.com/AirHelp/rabbit-amazon-forwarder/consumer"
 	"github.com/AirHelp/rabbit-amazon-forwarder/forwarder"
+	"github.com/AirHelp/rabbit-amazon-forwarder/lambda"
 	"github.com/AirHelp/rabbit-amazon-forwarder/rabbitmq"
 	"github.com/AirHelp/rabbit-amazon-forwarder/sns"
 	"github.com/AirHelp/rabbit-amazon-forwarder/sqs"
@@ -86,6 +87,8 @@ func (h helperImpl) createForwarder(entry config.AmazonEntry) forwarder.Client {
 		return sns.CreateForwarder(entry)
 	case sqs.Type:
 		return sqs.CreateForwarder(entry)
+	case lambda.Type:
+		return lambda.CreateForwarder(entry)
 	}
 	return nil
 }

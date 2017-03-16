@@ -22,7 +22,7 @@ type Forwarder struct {
 
 // CreateForwarder creates instance of forwarder
 func CreateForwarder(entry config.AmazonEntry) forwarder.Client {
-	client := awsClient()
+	client := sqs.New(session.New())
 	forwarder := Forwarder{entry.Name, client, entry.Target}
 	log.Print("Created forwarder: ", forwarder.Name())
 	return forwarder
@@ -48,9 +48,4 @@ func (f Forwarder) Push(message string) error {
 	}
 	log.Printf("[%s] Forward succeeded. Response: %s", f.Name(), resp)
 	return nil
-}
-
-func awsClient() *sqs.SQS {
-	sess := session.New()
-	return sqs.New(sess)
 }
