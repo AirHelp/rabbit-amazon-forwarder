@@ -110,13 +110,13 @@ func (c Consumer) Start(forwarder forwarder.Client, check chan bool, stop chan b
 
 func (c Consumer) startForwarding(params *workerParams) {
 	forwarderName := params.forwarder.Name()
-	defer params.ch.Close()
-	defer params.conn.Close()
 	log.Printf("[%s] Started forwarding messages to %s", c.Name(), forwarderName)
 	for {
 		select {
 		case d, ok := <-params.msgs:
 			if !ok { // channel already closed
+				params.ch.Close()
+				params.conn.Close()
 				go c.Start(params.forwarder, params.check, params.stop)
 				return
 			}
@@ -133,6 +133,8 @@ func (c Consumer) startForwarding(params *workerParams) {
 			log.Printf("[%s] Checking", forwarderName)
 		case <-params.stop:
 			log.Printf("[%s] Closing", forwarderName)
+			params.ch.Close()
+			params.conn.Close()
 			break
 		}
 	}
