@@ -50,9 +50,7 @@ func (c *Client) Start() error {
 	for consumer, forwarder := range c.mappings {
 		channel := makeConsumerChannel(forwarder.Name())
 		c.consumers[forwarder.Name()] = channel
-		if err := consumer.Start(forwarder, channel.check, channel.stop); err != nil {
-			return err
-		}
+		go consumer.Start(forwarder, channel.check, channel.stop)
 		log.Printf("Started consumer:%s with forwader:%s", consumer.Name(), forwarder.Name())
 	}
 	return nil

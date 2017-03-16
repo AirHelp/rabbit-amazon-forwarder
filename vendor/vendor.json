@@ -203,10 +203,10 @@
 			"revisionTime": "2017-03-14T21:47:04Z"
 		},
 		{
-			"checksumSHA1": "PNFiPbDwLwZs7CcqH91LH7gXI5U=",
+			"checksumSHA1": "Om0cn0L5ewCIBcORQAXD8guTa9M=",
 			"path": "github.com/streadway/amqp",
-			"revision": "d75c3a341ff43309ad0cb69ac8bdbd1d8772775f",
-			"revisionTime": "2017-02-03T13:40:38Z"
+			"revision": "afe8eee29a74d213b1f3fb2586058157c397da60",
+			"revisionTime": "2017-03-13T17:48:48Z"
 		}
 	],
 	"rootPath": "github.com/AirHelp/rabbit-amazon-forwarder"

@@ -1,8 +1,10 @@
 package rabbitmq
 
 import (
+	"errors"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/AirHelp/rabbit-amazon-forwarder/config"
 	"github.com/AirHelp/rabbit-amazon-forwarder/consumer"
@@ -11,7 +13,9 @@ import (
 )
 
 const (
-	Type = "RabbitMQ"
+	Type                      = "RabbitMQ"
+	channelClosedMessage      = "Channel closed"
+	closedBySupervisorMessage = "Closed by supervisor"
 )
 
 // Consumer implementation or RabbitMQ consumer
@@ -46,14 +50,30 @@ func (c Consumer) Name() string {
 // Start start consuming messages from Rabbit queue
 func (c Consumer) Start(forwarder forwarder.Client, check chan bool, stop chan bool) error {
 	log.Print("Starting consumer with params: ", c)
+	for {
+		delivery, conn, ch, err := c.connect()
+		if err != nil {
+			log.Print(err)
+			time.Sleep(1 * time.Second)
+			continue
+		}
+		params := workerParams{forwarder, delivery, check, stop, conn, ch}
+		if err := c.startForwarding(&params); err.Error() == closedBySupervisorMessage {
+			break
+		}
+	}
+	return nil
+}
+
+func (c Consumer) connect() (<-chan amqp.Delivery, *amqp.Connection, *amqp.Channel, error) {
 	conn, err := amqp.Dial(c.ConnectionURL)
 	if err != nil {
-		failOnError(err, "Failed to connect to RabbitMQ")
+		return failOnError(err, "Failed to connect to RabbitMQ")
 	}
 
 	ch, err := conn.Channel()
 	if err != nil {
-		failOnError(err, "Failed to open a channel")
+		return failOnError(err, "Failed to open a channel")
 	}
 
 	err = ch.ExchangeDeclare(
@@ -78,7 +98,7 @@ func (c Consumer) Start(forwarder forwarder.Client, check chan bool, stop chan b
 		nil,         // arguments
 	)
 	if err != nil {
-		failOnError(err, "Failed to declare a queue")
+		return failOnError(err, "Failed to declare a queue")
 	}
 	err = ch.QueueBind(
 		queue.Name,     // queue name
@@ -87,7 +107,7 @@ func (c Consumer) Start(forwarder forwarder.Client, check chan bool, stop chan b
 		false,
 		nil)
 	if err != nil {
-		failOnError(err, "Failed to bind a queue")
+		return failOnError(err, "Failed to bind a queue")
 	}
 
 	msgs, err := ch.Consume(
@@ -102,13 +122,10 @@ func (c Consumer) Start(forwarder forwarder.Client, check chan bool, stop chan b
 	if err != nil {
 		return failOnError(err, "Failed to register a consumer")
 	}
-	params := workerParams{forwarder, msgs, check, stop, conn, ch}
-	go c.startForwarding(&params)
-
-	return nil
+	return msgs, conn, ch, nil
 }
 
-func (c Consumer) startForwarding(params *workerParams) {
+func (c Consumer) startForwarding(params *workerParams) error {
 	forwarderName := params.forwarder.Name()
 	log.Printf("[%s] Started forwarding messages to %s", c.Name(), forwarderName)
 	for {
@@ -117,8 +134,7 @@ func (c Consumer) startForwarding(params *workerParams) {
 			if !ok { // channel already closed
 				params.ch.Close()
 				params.conn.Close()
-				go c.Start(params.forwarder, params.check, params.stop)
-				return
+				return errors.New(channelClosedMessage)
 			}
 			log.Printf("[%s] Message to forward: %v", c.Name(), d.MessageId)
 			err := params.forwarder.Push(string(d.Body))
@@ -135,11 +151,11 @@ func (c Consumer) startForwarding(params *workerParams) {
 			log.Printf("[%s] Closing", forwarderName)
 			params.ch.Close()
 			params.conn.Close()
-			break
+			return errors.New(closedBySupervisorMessage)
 		}
 	}
 }
 
-func failOnError(err error, msg string) error {
-	return fmt.Errorf("%s: %s", msg, err)
+func failOnError(err error, msg string) (<-chan amqp.Delivery, *amqp.Connection, *amqp.Channel, error) {
+	return nil, nil, nil, fmt.Errorf("%s: %s", msg, err)
 }
