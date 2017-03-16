@@ -9,9 +9,9 @@
       "routing" : "#"
     },
     "destination" : {
-      "type" : "SNS",
-      "name" : "test-sns",
-      "target" : "arn:aws:sns:eu-west-1:XXXXXXXX:test-forwarder"
+      "type" : "Lambda",
+      "name" : "test-lambda",
+      "target" : "test-forwarder-lambda"
     }
   }
 ]

@@ -8,6 +8,7 @@ import (
 	"github.com/AirHelp/rabbit-amazon-forwarder/config"
 	"github.com/AirHelp/rabbit-amazon-forwarder/consumer"
 	"github.com/AirHelp/rabbit-amazon-forwarder/forwarder"
+	"github.com/AirHelp/rabbit-amazon-forwarder/lambda"
 	"github.com/AirHelp/rabbit-amazon-forwarder/rabbitmq"
 	"github.com/AirHelp/rabbit-amazon-forwarder/sns"
 	"github.com/AirHelp/rabbit-amazon-forwarder/sqs"
@@ -84,6 +85,19 @@ func TestCreateForwarderSQS(t *testing.T) {
 	}
 }
 
+func TestCreateForwarderLambda(t *testing.T) {
+	client := New(MockMappingHelper{})
+	forwarderName := "test-lambda"
+	entry := config.AmazonEntry{Type: "Lambda",
+		Name:   forwarderName,
+		Target: "function-name",
+	}
+	forwarder := client.helper.createForwarder(entry)
+	if forwarder.Name() != forwarderName {
+		t.Errorf("wrong forwarder name, expected %s, found %s", forwarderName, forwarder.Name())
+	}
+}
+
 // helpers
 type MockMappingHelper struct{}
 
@@ -94,6 +108,10 @@ type MockSNSForwarder struct {
 }
 
 type MockSQSForwarder struct {
+	name string
+}
+
+type MockLambdaForwarder struct {
 	name string
 }
 
@@ -111,6 +129,8 @@ func (h MockMappingHelper) createForwarder(entry config.AmazonEntry) forwarder.C
 		return MockSNSForwarder{entry.Name}
 	case sqs.Type:
 		return MockSQSForwarder{entry.Name}
+	case lambda.Type:
+		return MockLambdaForwarder{entry.Name}
 	}
 	return ErrorForwarder{}
 }
@@ -132,6 +152,14 @@ func (f MockSNSForwarder) Push(message string) error {
 }
 
 func (f MockSQSForwarder) Name() string {
+	return f.name
+}
+
+func (f MockLambdaForwarder) Push(message string) error {
+	return nil
+}
+
+func (f MockLambdaForwarder) Name() string {
 	return f.name
 }
 
