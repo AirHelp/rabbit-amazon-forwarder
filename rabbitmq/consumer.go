@@ -103,31 +103,37 @@ func (c Consumer) Start(forwarder forwarder.Client, check chan bool, stop chan b
 		return failOnError(err, "Failed to register a consumer")
 	}
 	params := workerParams{forwarder, msgs, check, stop, conn, ch}
-	go c.push(params)
+	go c.startForwarding(&params)
 
 	return nil
 }
 
-func (c Consumer) push(params workerParams) {
+func (c Consumer) startForwarding(params *workerParams) {
 	forwarderName := params.forwarder.Name()
+	defer params.ch.Close()
+	defer params.conn.Close()
 	log.Printf("[%s] Started forwarding messages to %s", c.Name(), forwarderName)
 	for {
 		select {
-		case d := <-params.msgs:
+		case d, ok := <-params.msgs:
+			if !ok { // channel already closed
+				go c.Start(params.forwarder, params.check, params.stop)
+				return
+			}
 			log.Printf("[%s] Message to forward: %v", c.Name(), d.MessageId)
 			err := params.forwarder.Push(string(d.Body))
 			if err != nil {
 				log.Printf("[%s] Could not forward message. Error: %s", forwarderName, err.Error())
 			} else {
-				d.Ack(true)
+				if err := d.Ack(true); err != nil {
+					log.Println("Could not ack message with id:", d.MessageId)
+				}
 			}
 		case <-params.check:
 			log.Printf("[%s] Checking", forwarderName)
 		case <-params.stop:
 			log.Printf("[%s] Closing", forwarderName)
-			params.ch.Close()
-			params.conn.Close()
-			return
+			break
 		}
 	}
 }
