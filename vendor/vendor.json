@@ -153,14 +153,32 @@
 			"revisionTime": "2017-03-14T21:47:04Z"
 		},
 		{
+			"checksumSHA1": "ZJvGw2cpgfVLqTZOomp0TClnp6Y=",
+			"path": "github.com/aws/aws-sdk-go/service/lambda/lambdaiface",
+			"revision": "62c16d8bf2fd6ee59f2bf11ae8268d045470ccf6",
+			"revisionTime": "2017-03-14T21:47:04Z"
+		},
+		{
 			"checksumSHA1": "3wN8qn+1be7xe/0zXrOM502s+8M=",
 			"path": "github.com/aws/aws-sdk-go/service/sns",
 			"revision": "62c16d8bf2fd6ee59f2bf11ae8268d045470ccf6",
 			"revisionTime": "2017-03-14T21:47:04Z"
 		},
 		{
+			"checksumSHA1": "GU4gaFfRhP11JMQK2QTTdYlgTew=",
+			"path": "github.com/aws/aws-sdk-go/service/sns/snsiface",
+			"revision": "62c16d8bf2fd6ee59f2bf11ae8268d045470ccf6",
+			"revisionTime": "2017-03-14T21:47:04Z"
+		},
+		{
 			"checksumSHA1": "pMyhp8ffTMnHDoF+Wu0rcvhVoNE=",
 			"path": "github.com/aws/aws-sdk-go/service/sqs",
+			"revision": "62c16d8bf2fd6ee59f2bf11ae8268d045470ccf6",
+			"revisionTime": "2017-03-14T21:47:04Z"
+		},
+		{
+			"checksumSHA1": "fvSayw4T/rRcmGjJGiep/8wJxis=",
+			"path": "github.com/aws/aws-sdk-go/service/sqs/sqsiface",
 			"revision": "62c16d8bf2fd6ee59f2bf11ae8268d045470ccf6",
 			"revisionTime": "2017-03-14T21:47:04Z"
 		},
@@ -185,10 +203,10 @@
 			"revisionTime": "2017-03-14T21:47:04Z"
 		},
 		{
-			"checksumSHA1": "PNFiPbDwLwZs7CcqH91LH7gXI5U=",
+			"checksumSHA1": "Om0cn0L5ewCIBcORQAXD8guTa9M=",
 			"path": "github.com/streadway/amqp",
-			"revision": "d75c3a341ff43309ad0cb69ac8bdbd1d8772775f",
-			"revisionTime": "2017-02-03T13:40:38Z"
+			"revision": "afe8eee29a74d213b1f3fb2586058157c397da60",
+			"revisionTime": "2017-03-13T17:48:48Z"
 		}
 	],
 	"rootPath": "github.com/AirHelp/rabbit-amazon-forwarder"

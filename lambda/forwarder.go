@@ -1,6 +1,7 @@
 package lambda
 
 import (
+	"errors"
 	"log"
 
 	"github.com/AirHelp/rabbit-amazon-forwarder/config"
@@ -8,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/lambda"
+	"github.com/aws/aws-sdk-go/service/lambda/lambdaiface"
 )
 
 const (
@@ -16,13 +18,18 @@ const (
 
 type Forwarder struct {
 	name         string
-	lambdaClient *lambda.Lambda
+	lambdaClient lambdaiface.LambdaAPI
 	function     string
 }
 
 // CreateForwarder creates instance of forwarder
-func CreateForwarder(entry config.AmazonEntry) forwarder.Client {
-	client := lambda.New(session.New())
+func CreateForwarder(entry config.AmazonEntry, lambdaClient ...lambdaiface.LambdaAPI) forwarder.Client {
+	var client lambdaiface.LambdaAPI
+	if len(lambdaClient) > 0 {
+		client = lambdaClient[0]
+	} else {
+		client = lambda.New(session.Must(session.NewSession()))
+	}
 	forwarder := Forwarder{entry.Name, client, entry.Target}
 	log.Print("Created forwarder: ", forwarder.Name())
 	return forwarder
@@ -35,6 +42,9 @@ func (f Forwarder) Name() string {
 
 // Push pushes message to forwarding infrastructure
 func (f Forwarder) Push(message string) error {
+	if message == "" {
+		return errors.New(forwarder.EmptyMessageError)
+	}
 	params := &lambda.InvokeInput{
 		FunctionName: aws.String(f.function),
 		Payload:      []byte(message),
@@ -44,6 +54,6 @@ func (f Forwarder) Push(message string) error {
 		log.Printf("[%s] Could not forward message. Error: %s", f.Name(), err.Error())
 		return err
 	}
-	log.Printf("[%s] Forward succeeded. Response: %s", f.Name(), resp)
+	log.Printf("[%s] Forward succeeded. Response: %v", f.Name(), resp)
 	return nil
 }

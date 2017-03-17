@@ -1,6 +1,7 @@
 package sqs
 
 import (
+	"errors"
 	"log"
 
 	"github.com/AirHelp/rabbit-amazon-forwarder/config"
@@ -8,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
 )
 
 const (
@@ -16,13 +18,18 @@ const (
 
 type Forwarder struct {
 	name      string
-	sqsClient *sqs.SQS
+	sqsClient sqsiface.SQSAPI
 	queue     string
 }
 
 // CreateForwarder creates instance of forwarder
-func CreateForwarder(entry config.AmazonEntry) forwarder.Client {
-	client := sqs.New(session.New())
+func CreateForwarder(entry config.AmazonEntry, sqsClient ...sqsiface.SQSAPI) forwarder.Client {
+	var client sqsiface.SQSAPI
+	if len(sqsClient) > 0 {
+		client = sqsClient[0]
+	} else {
+		client = sqs.New(session.Must(session.NewSession()))
+	}
 	forwarder := Forwarder{entry.Name, client, entry.Target}
 	log.Print("Created forwarder: ", forwarder.Name())
 	return forwarder
@@ -35,6 +42,9 @@ func (f Forwarder) Name() string {
 
 // Push pushes message to forwarding infrastructure
 func (f Forwarder) Push(message string) error {
+	if message == "" {
+		return errors.New(forwarder.EmptyMessageError)
+	}
 	params := &sqs.SendMessageInput{
 		MessageBody: aws.String(message), // Required
 		QueueUrl:    aws.String(f.queue), // Required
