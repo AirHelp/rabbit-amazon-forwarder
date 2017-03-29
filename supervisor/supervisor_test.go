@@ -16,8 +16,8 @@ func TestStart(t *testing.T) {
 	if err := supervisor.Start(); err != nil {
 		t.Error("could not start supervised consumer->forwader pairs, error: ", err.Error())
 	}
-	if len(supervisor.consumers) != 2 {
-		t.Errorf("wrong number of consumer-forwarder pairs, expected:%d, got:%d: ", 2, len(supervisor.consumers))
+	if len(supervisor.consumers) != 3 {
+		t.Errorf("wrong number of consumer-forwarder pairs, expected:%d, got:%d: ", 3, len(supervisor.consumers))
 	}
 }
 
@@ -101,6 +101,7 @@ func prepareConsumers() map[consumer.Client]forwarder.Client {
 	consumers := make(map[consumer.Client]forwarder.Client)
 	consumers[MockRabbitConsumer{"rabbit1"}] = MockSNSForwarder{"sns"}
 	consumers[MockRabbitConsumer{"rabbit2"}] = MockSQSForwarder{"sqs"}
+	consumers[MockRabbitConsumer{"rabbit3"}] = MockLambdaForwarder{"lambda"}
 	return consumers
 }
 
@@ -113,6 +114,10 @@ type MockSNSForwarder struct {
 }
 
 type MockSQSForwarder struct {
+	name string
+}
+
+type MockLambdaForwarder struct {
 	name string
 }
 
@@ -145,5 +150,13 @@ func (f MockSQSForwarder) Name() string {
 }
 
 func (f MockSQSForwarder) Push(message string) error {
+	return nil
+}
+
+func (f MockLambdaForwarder) Name() string {
+	return f.name
+}
+
+func (f MockLambdaForwarder) Push(message string) error {
 	return nil
 }
