@@ -112,7 +112,6 @@ func errorResponse(w http.ResponseWriter, message string) {
 	w.Header().Set(contentType, jsonType)
 	w.WriteHeader(500)
 	w.Write([]byte(message))
-	return
 }
 
 func notAccpetableResponse(w http.ResponseWriter) {
@@ -125,7 +124,6 @@ func notAccpetableResponse(w http.ResponseWriter) {
 		return
 	}
 	w.Write(bytes)
-	return
 }
 
 func successResponse(w http.ResponseWriter) {

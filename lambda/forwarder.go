@@ -54,6 +54,10 @@ func (f Forwarder) Push(message string) error {
 		log.Printf("[%s] Could not forward message. Error: %s", f.Name(), err.Error())
 		return err
 	}
-	log.Printf("[%s] Forward succeeded. Response: %v", f.Name(), resp)
+	if resp.FunctionError != nil {
+		log.Printf("[%s] Could not forward message. Function error: %s", f.Name(), *resp.FunctionError)
+		return errors.New(*resp.FunctionError)
+	}
+	log.Printf("[%s] Forward succeeded. Code:%d, body:%s", f.Name(), resp.StatusCode, string(resp.Payload))
 	return nil
 }
