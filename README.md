@@ -14,11 +14,11 @@ Key features:
 
 ## Configuration
 
-Definition of forwarder->consumer pairs should be placed inside mapping file.
+The list of RabbitMQ sources and corresponding AWS target resources are stored in mapping file.
 
 ### Mapping file
 
-Sample of RabbitMQ -> SNS mapping file. All fields are required.
+Sample of RabbitMQ -> SNS mapping file. All fields are required. Samples are located in [examples](https://github.com/AirHelp/rabbit-amazon-forwarder/examples) directory.
 ```json
 [
   {
@@ -38,7 +38,6 @@ Sample of RabbitMQ -> SNS mapping file. All fields are required.
   }
 ]
 ```
-Samples are located in [examples](https://github.com/AirHelp/rabbit-amazon-forwarder/examples) directory.
 
 ### Environment variables
 
