@@ -2,26 +2,23 @@
 
 Application to forward messages from RabbitMQ to different Amazon services.
 
+Key features:
+
+* forwarding RabbitMQ message to AWS SNS topic
+* forwarding RabbitMQ message to AWS SNS queue
+* triggering AWS lambda function directly from RabbitMQ message
+
 ## Architecture
 
 ![Alt text](img/rabbit-amazon-forwarder.png?raw=true "RabbitMQ -> Amazon architecture")
 
 ## Configuration
 
-### Environment variables
-
-Export environment variables:
-```bash
-export MAPPING_FILE=/config/mapping.json
-export AWS_REGION=region
-export AWS_ACCESS_KEY_ID=access_key
-export AWS_SECRET_ACCESS_KEY=secret_key
-```
+The list of RabbitMQ sources and corresponding AWS target resources are stored in mapping file.
 
 ### Mapping file
 
-Definition of forwarder->consumer pairs should be placed inside mapping file.
-Sample of RabbitMQ -> SNS mapping file. All fields are required.
+Sample of RabbitMQ -> SNS mapping file. All fields are required. Samples are located in [examples](https://github.com/AirHelp/rabbit-amazon-forwarder/examples) directory.
 ```json
 [
   {
@@ -41,7 +38,16 @@ Sample of RabbitMQ -> SNS mapping file. All fields are required.
   }
 ]
 ```
-Samples are located in `examples` directory.
+
+### Environment variables
+
+Forwarder uses the following environment variables:
+```bash
+export MAPPING_FILE=/config/mapping.json
+export AWS_REGION=region
+export AWS_ACCESS_KEY_ID=access_key
+export AWS_SECRET_ACCESS_KEY=secret_key
+```
 
 ### Amazon configuration
 
