@@ -1,5 +1,7 @@
 # RabbitMQ -> Amazon forwader
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/AirHelp/rabbit-amazon-forwarder)](https://goreportcard.com/report/github.com/AirHelp/rabbit-amazon-forwarder)
+
 Application to forward messages from RabbitMQ to different Amazon services.
 
 Key features:
