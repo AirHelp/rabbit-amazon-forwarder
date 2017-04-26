@@ -13,9 +13,11 @@ import (
 )
 
 const (
+	// Type forwarder type
 	Type = "SQS"
 )
 
+// Forwarder forwarding client
 type Forwarder struct {
 	name      string
 	sqsClient sqsiface.SQSAPI
