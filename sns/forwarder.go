@@ -13,9 +13,11 @@ import (
 )
 
 const (
+	// Type forwarder type
 	Type = "SNS"
 )
 
+// Forwarder forwarding client
 type Forwarder struct {
 	name      string
 	snsClient snsiface.SNSAPI

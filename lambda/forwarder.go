@@ -13,9 +13,11 @@ import (
 )
 
 const (
+	// Type forwarder type
 	Type = "Lambda"
 )
 
+// Forwarder forwarding client
 type Forwarder struct {
 	name         string
 	lambdaClient lambdaiface.LambdaAPI

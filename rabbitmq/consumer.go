@@ -13,6 +13,7 @@ import (
 )
 
 const (
+	// Type consumer type
 	Type                      = "RabbitMQ"
 	channelClosedMessage      = "Channel closed"
 	closedBySupervisorMessage = "Closed by supervisor"
