@@ -67,59 +67,41 @@ func (c Consumer) Start(forwarder forwarder.Client, check chan bool, stop chan b
 }
 
 func (c Consumer) connect() (<-chan amqp.Delivery, *amqp.Connection, *amqp.Channel, error) {
+	deadLetterExchangeName := c.ExchangeName + "-dead-letter"
+	deadLetterQueueName := c.QueueName + "-dead-letter"
 	conn, err := amqp.Dial(c.ConnectionURL)
 	if err != nil {
 		return failOnError(err, "Failed to connect to RabbitMQ")
 	}
-
 	ch, err := conn.Channel()
 	if err != nil {
 		return failOnError(err, "Failed to open a channel")
 	}
-
-	err = ch.ExchangeDeclare(
-		c.ExchangeName, // name
-		"topic",        // type
-		true,           // durable
-		false,          // auto-deleted
-		false,          // internal
-		false,          // no-wait
-		nil,            // arguments
-	)
-	if err != nil {
-		return failOnError(err, "Failed to declare an exchange")
+	if err = ch.ExchangeDeclare(c.ExchangeName, "topic", true, false, false, false, nil); err != nil {
+		return failOnError(err, "Failed to declare an exchange:"+c.ExchangeName)
+	}
+	if err = ch.ExchangeDeclare(deadLetterExchangeName, "fanout", true, false, false, false, nil); err != nil {
+		return failOnError(err, "Failed to declare an exchange:"+deadLetterExchangeName)
+	}
+	// dead-letter-queue
+	if _, err = ch.QueueDeclare(deadLetterQueueName, true, false, false, false, nil); err != nil {
+		return failOnError(err, "Failed to declare a queue:"+deadLetterQueueName)
+	}
+	if err = ch.QueueBind(deadLetterQueueName, "#", deadLetterExchangeName, false, nil); err != nil {
+		return failOnError(err, "Failed to bind a queue:"+deadLetterQueueName)
+	}
+	// redular queue
+	if _, err = ch.QueueDeclare(c.QueueName, true, false, false, false,
+		amqp.Table{
+			"x-dead-letter-exchange": deadLetterExchangeName,
+		}); err != nil {
+		return failOnError(err, "Failed to declare a queue:"+c.QueueName)
+	}
+	if err = ch.QueueBind(c.QueueName, c.RoutingKey, c.ExchangeName, false, nil); err != nil {
+		return failOnError(err, "Failed to bind a queue:"+c.QueueName)
 	}
 
-	queue, err := ch.QueueDeclare(
-		c.QueueName, // name
-		true,        // durable
-		false,       // delete when usused
-		false,       // exclusive
-		false,       // no-wait
-		nil,         // arguments
-	)
-	if err != nil {
-		return failOnError(err, "Failed to declare a queue")
-	}
-	err = ch.QueueBind(
-		queue.Name,     // queue name
-		c.RoutingKey,   // routing key
-		c.ExchangeName, // exchange
-		false,
-		nil)
-	if err != nil {
-		return failOnError(err, "Failed to bind a queue")
-	}
-
-	msgs, err := ch.Consume(
-		queue.Name, // queue
-		c.Name(),   // consumer
-		false,      // auto ack
-		false,      // exclusive
-		false,      // no local
-		false,      // no wait
-		nil,        // args
-	)
+	msgs, err := ch.Consume(c.QueueName, c.Name(), false, false, false, false, nil)
 	if err != nil {
 		return failOnError(err, "Failed to register a consumer")
 	}
@@ -141,6 +123,10 @@ func (c Consumer) startForwarding(params *workerParams) error {
 			err := params.forwarder.Push(string(d.Body))
 			if err != nil {
 				log.Printf("[%s] Could not forward message. Error: %s", forwarderName, err.Error())
+				if err = d.Reject(false); err != nil {
+					log.Printf("[%s] Could not reject message", forwarderName)
+				}
+
 			} else {
 				if err := d.Ack(true); err != nil {
 					log.Println("Could not ack message with id:", d.MessageId)
