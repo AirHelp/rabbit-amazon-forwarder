@@ -69,6 +69,7 @@ func (c Consumer) Start(forwarder forwarder.Client, check chan bool, stop chan b
 func (c Consumer) connect() (<-chan amqp.Delivery, *amqp.Connection, *amqp.Channel, error) {
 	deadLetterExchangeName := c.ExchangeName + "-dead-letter"
 	deadLetterQueueName := c.QueueName + "-dead-letter"
+
 	conn, err := amqp.Dial(c.ConnectionURL)
 	if err != nil {
 		return failOnError(err, "Failed to connect to RabbitMQ")
@@ -77,9 +78,12 @@ func (c Consumer) connect() (<-chan amqp.Delivery, *amqp.Connection, *amqp.Chann
 	if err != nil {
 		return failOnError(err, "Failed to open a channel")
 	}
+
+	// regural exchange
 	if err = ch.ExchangeDeclare(c.ExchangeName, "topic", true, false, false, false, nil); err != nil {
 		return failOnError(err, "Failed to declare an exchange:"+c.ExchangeName)
 	}
+	// dead-letter-exchange
 	if err = ch.ExchangeDeclare(deadLetterExchangeName, "fanout", true, false, false, false, nil); err != nil {
 		return failOnError(err, "Failed to declare an exchange:"+deadLetterExchangeName)
 	}
@@ -90,7 +94,7 @@ func (c Consumer) connect() (<-chan amqp.Delivery, *amqp.Connection, *amqp.Chann
 	if err = ch.QueueBind(deadLetterQueueName, "#", deadLetterExchangeName, false, nil); err != nil {
 		return failOnError(err, "Failed to bind a queue:"+deadLetterQueueName)
 	}
-	// redular queue
+	// regular queue
 	if _, err = ch.QueueDeclare(c.QueueName, true, false, false, false,
 		amqp.Table{
 			"x-dead-letter-exchange": deadLetterExchangeName,
