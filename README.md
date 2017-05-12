@@ -11,6 +11,7 @@ Key features:
 * triggering AWS lambda function directly from RabbitMQ message
 * automatic RabbitMQ reconnect
 * message delivery assurance based on RabbitMQ persistency and AWS error handling
+* dedicated dead-letter exchange and queue creation
 * http health checks and restart functionality
 
 ## Architecture
