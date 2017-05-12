@@ -126,9 +126,9 @@ func (c Consumer) startForwarding(params *workerParams) error {
 			log.Printf("[%s] Message to forward: %v", c.Name(), d.MessageId)
 			err := params.forwarder.Push(string(d.Body))
 			if err != nil {
-				log.Printf("[%s] Could not forward message. Error: %s", forwarderName, err.Error())
+				log.Printf("[%s] Could not forward message. Error: %v", forwarderName, err)
 				if err = d.Reject(false); err != nil {
-					log.Printf("[%s] Could not reject message", forwarderName)
+					log.Printf("[%s] Could not reject message. Error: %v", forwarderName, err)
 				}
 
 			} else {
