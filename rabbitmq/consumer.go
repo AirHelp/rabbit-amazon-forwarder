@@ -17,6 +17,8 @@ const (
 	Type                      = "RabbitMQ"
 	channelClosedMessage      = "Channel closed"
 	closedBySupervisorMessage = "Closed by supervisor"
+	// ReconnectRabbitMQInterval time to reconnect
+	ReconnectRabbitMQInterval = 10
 )
 
 // Consumer implementation or RabbitMQ consumer
@@ -55,7 +57,8 @@ func (c Consumer) Start(forwarder forwarder.Client, check chan bool, stop chan b
 		delivery, conn, ch, err := c.initRabbitMQ()
 		if err != nil {
 			log.Print(err)
-			time.Sleep(1 * time.Second)
+			closeRabbitMQ(conn, ch)
+			time.Sleep(ReconnectRabbitMQInterval * time.Second)
 			continue
 		}
 		params := workerParams{forwarder, delivery, check, stop, conn, ch}
@@ -66,12 +69,27 @@ func (c Consumer) Start(forwarder forwarder.Client, check chan bool, stop chan b
 	return nil
 }
 
+func closeRabbitMQ(conn *amqp.Connection, ch *amqp.Channel) {
+	log.Print("Closing RabbitMQ connection and channel")
+	if ch != nil {
+		if err := ch.Close(); err != nil {
+			log.Print("Could not close channel. Error: ", err)
+		}
+	}
+	if conn != nil {
+		if err := conn.Close(); err != nil {
+			log.Print("Could not close connection. Error: ", err)
+		}
+	}
+}
+
 func (c Consumer) initRabbitMQ() (<-chan amqp.Delivery, *amqp.Connection, *amqp.Channel, error) {
 	_, connection, channel, err := c.connect()
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, connection, channel, err
 	}
-	return c.setupExchangesAndQueues(connection, channel)
+	delivery, _, _, err := c.setupExchangesAndQueues(connection, channel)
+	return delivery, connection, channel, err
 }
 
 func (c Consumer) connect() (<-chan amqp.Delivery, *amqp.Connection, *amqp.Channel, error) {
@@ -120,7 +138,7 @@ func (c Consumer) setupExchangesAndQueues(conn *amqp.Connection, ch *amqp.Channe
 	if err != nil {
 		return failOnError(err, "Failed to register a consumer")
 	}
-	return msgs, conn, ch, nil
+	return msgs, nil, nil, nil
 }
 
 func (c Consumer) startForwarding(params *workerParams) error {
@@ -130,8 +148,7 @@ func (c Consumer) startForwarding(params *workerParams) error {
 		select {
 		case d, ok := <-params.msgs:
 			if !ok { // channel already closed
-				params.ch.Close()
-				params.conn.Close()
+				closeRabbitMQ(params.conn, params.ch)
 				return errors.New(channelClosedMessage)
 			}
 			log.Printf("[%s] Message to forward: %v", c.Name(), d.MessageId)
@@ -151,8 +168,7 @@ func (c Consumer) startForwarding(params *workerParams) error {
 			log.Printf("[%s] Checking", forwarderName)
 		case <-params.stop:
 			log.Printf("[%s] Closing", forwarderName)
-			params.ch.Close()
-			params.conn.Close()
+			closeRabbitMQ(params.conn, params.ch)
 			return errors.New(closedBySupervisorMessage)
 		}
 	}
