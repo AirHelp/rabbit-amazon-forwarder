@@ -52,7 +52,7 @@ func (c Consumer) Name() string {
 func (c Consumer) Start(forwarder forwarder.Client, check chan bool, stop chan bool) error {
 	log.Print("Starting consumer with params: ", c)
 	for {
-		delivery, conn, ch, err := c.connect()
+		delivery, conn, ch, err := c.initRabbitMQ()
 		if err != nil {
 			log.Print(err)
 			time.Sleep(1 * time.Second)
@@ -66,10 +66,15 @@ func (c Consumer) Start(forwarder forwarder.Client, check chan bool, stop chan b
 	return nil
 }
 
-func (c Consumer) connect() (<-chan amqp.Delivery, *amqp.Connection, *amqp.Channel, error) {
-	deadLetterExchangeName := c.ExchangeName + "-dead-letter"
-	deadLetterQueueName := c.QueueName + "-dead-letter"
+func (c Consumer) initRabbitMQ() (<-chan amqp.Delivery, *amqp.Connection, *amqp.Channel, error) {
+	_, connection, channel, err := c.connect()
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return c.setupExchangesAndQueues(connection, channel)
+}
 
+func (c Consumer) connect() (<-chan amqp.Delivery, *amqp.Connection, *amqp.Channel, error) {
 	conn, err := amqp.Dial(c.ConnectionURL)
 	if err != nil {
 		return failOnError(err, "Failed to connect to RabbitMQ")
@@ -78,8 +83,14 @@ func (c Consumer) connect() (<-chan amqp.Delivery, *amqp.Connection, *amqp.Chann
 	if err != nil {
 		return failOnError(err, "Failed to open a channel")
 	}
+	return nil, conn, ch, nil
+}
 
-	// regural exchange
+func (c Consumer) setupExchangesAndQueues(conn *amqp.Connection, ch *amqp.Channel) (<-chan amqp.Delivery, *amqp.Connection, *amqp.Channel, error) {
+	var err error
+	deadLetterExchangeName := c.QueueName + "-dead-letter"
+	deadLetterQueueName := c.QueueName + "-dead-letter"
+	// regular exchange
 	if err = ch.ExchangeDeclare(c.ExchangeName, "topic", true, false, false, false, nil); err != nil {
 		return failOnError(err, "Failed to declare an exchange:"+c.ExchangeName)
 	}
