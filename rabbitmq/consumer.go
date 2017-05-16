@@ -17,6 +17,8 @@ const (
 	Type                      = "RabbitMQ"
 	channelClosedMessage      = "Channel closed"
 	closedBySupervisorMessage = "Closed by supervisor"
+	// ReconnectRabbitMQInterval time to reconnect
+	ReconnectRabbitMQInterval = 10
 )
 
 // Consumer implementation or RabbitMQ consumer
@@ -52,10 +54,11 @@ func (c Consumer) Name() string {
 func (c Consumer) Start(forwarder forwarder.Client, check chan bool, stop chan bool) error {
 	log.Print("Starting consumer with params: ", c)
 	for {
-		delivery, conn, ch, err := c.connect()
+		delivery, conn, ch, err := c.initRabbitMQ()
 		if err != nil {
 			log.Print(err)
-			time.Sleep(1 * time.Second)
+			closeRabbitMQ(conn, ch)
+			time.Sleep(ReconnectRabbitMQInterval * time.Second)
 			continue
 		}
 		params := workerParams{forwarder, delivery, check, stop, conn, ch}
@@ -66,64 +69,76 @@ func (c Consumer) Start(forwarder forwarder.Client, check chan bool, stop chan b
 	return nil
 }
 
+func closeRabbitMQ(conn *amqp.Connection, ch *amqp.Channel) {
+	log.Print("Closing RabbitMQ connection and channel")
+	if ch != nil {
+		if err := ch.Close(); err != nil {
+			log.Print("Could not close channel. Error: ", err)
+		}
+	}
+	if conn != nil {
+		if err := conn.Close(); err != nil {
+			log.Print("Could not close connection. Error: ", err)
+		}
+	}
+}
+
+func (c Consumer) initRabbitMQ() (<-chan amqp.Delivery, *amqp.Connection, *amqp.Channel, error) {
+	_, connection, channel, err := c.connect()
+	if err != nil {
+		return nil, connection, channel, err
+	}
+	delivery, _, _, err := c.setupExchangesAndQueues(connection, channel)
+	return delivery, connection, channel, err
+}
+
 func (c Consumer) connect() (<-chan amqp.Delivery, *amqp.Connection, *amqp.Channel, error) {
 	conn, err := amqp.Dial(c.ConnectionURL)
 	if err != nil {
 		return failOnError(err, "Failed to connect to RabbitMQ")
 	}
-
 	ch, err := conn.Channel()
 	if err != nil {
 		return failOnError(err, "Failed to open a channel")
 	}
+	return nil, conn, ch, nil
+}
 
-	err = ch.ExchangeDeclare(
-		c.ExchangeName, // name
-		"topic",        // type
-		true,           // durable
-		false,          // auto-deleted
-		false,          // internal
-		false,          // no-wait
-		nil,            // arguments
-	)
-	if err != nil {
-		return failOnError(err, "Failed to declare an exchange")
+func (c Consumer) setupExchangesAndQueues(conn *amqp.Connection, ch *amqp.Channel) (<-chan amqp.Delivery, *amqp.Connection, *amqp.Channel, error) {
+	var err error
+	deadLetterExchangeName := c.QueueName + "-dead-letter"
+	deadLetterQueueName := c.QueueName + "-dead-letter"
+	// regular exchange
+	if err = ch.ExchangeDeclare(c.ExchangeName, "topic", true, false, false, false, nil); err != nil {
+		return failOnError(err, "Failed to declare an exchange:"+c.ExchangeName)
+	}
+	// dead-letter-exchange
+	if err = ch.ExchangeDeclare(deadLetterExchangeName, "fanout", true, false, false, false, nil); err != nil {
+		return failOnError(err, "Failed to declare an exchange:"+deadLetterExchangeName)
+	}
+	// dead-letter-queue
+	if _, err = ch.QueueDeclare(deadLetterQueueName, true, false, false, false, nil); err != nil {
+		return failOnError(err, "Failed to declare a queue:"+deadLetterQueueName)
+	}
+	if err = ch.QueueBind(deadLetterQueueName, "#", deadLetterExchangeName, false, nil); err != nil {
+		return failOnError(err, "Failed to bind a queue:"+deadLetterQueueName)
+	}
+	// regular queue
+	if _, err = ch.QueueDeclare(c.QueueName, true, false, false, false,
+		amqp.Table{
+			"x-dead-letter-exchange": deadLetterExchangeName,
+		}); err != nil {
+		return failOnError(err, "Failed to declare a queue:"+c.QueueName)
+	}
+	if err = ch.QueueBind(c.QueueName, c.RoutingKey, c.ExchangeName, false, nil); err != nil {
+		return failOnError(err, "Failed to bind a queue:"+c.QueueName)
 	}
 
-	queue, err := ch.QueueDeclare(
-		c.QueueName, // name
-		true,        // durable
-		false,       // delete when usused
-		false,       // exclusive
-		false,       // no-wait
-		nil,         // arguments
-	)
-	if err != nil {
-		return failOnError(err, "Failed to declare a queue")
-	}
-	err = ch.QueueBind(
-		queue.Name,     // queue name
-		c.RoutingKey,   // routing key
-		c.ExchangeName, // exchange
-		false,
-		nil)
-	if err != nil {
-		return failOnError(err, "Failed to bind a queue")
-	}
-
-	msgs, err := ch.Consume(
-		queue.Name, // queue
-		c.Name(),   // consumer
-		false,      // auto ack
-		false,      // exclusive
-		false,      // no local
-		false,      // no wait
-		nil,        // args
-	)
+	msgs, err := ch.Consume(c.QueueName, c.Name(), false, false, false, false, nil)
 	if err != nil {
 		return failOnError(err, "Failed to register a consumer")
 	}
-	return msgs, conn, ch, nil
+	return msgs, nil, nil, nil
 }
 
 func (c Consumer) startForwarding(params *workerParams) error {
@@ -133,14 +148,17 @@ func (c Consumer) startForwarding(params *workerParams) error {
 		select {
 		case d, ok := <-params.msgs:
 			if !ok { // channel already closed
-				params.ch.Close()
-				params.conn.Close()
+				closeRabbitMQ(params.conn, params.ch)
 				return errors.New(channelClosedMessage)
 			}
 			log.Printf("[%s] Message to forward: %v", c.Name(), d.MessageId)
 			err := params.forwarder.Push(string(d.Body))
 			if err != nil {
-				log.Printf("[%s] Could not forward message. Error: %s", forwarderName, err.Error())
+				log.Printf("[%s] Could not forward message. Error: %v", forwarderName, err)
+				if err = d.Reject(false); err != nil {
+					log.Printf("[%s] Could not reject message. Error: %v", forwarderName, err)
+				}
+
 			} else {
 				if err := d.Ack(true); err != nil {
 					log.Println("Could not ack message with id:", d.MessageId)
@@ -150,8 +168,7 @@ func (c Consumer) startForwarding(params *workerParams) error {
 			log.Printf("[%s] Checking", forwarderName)
 		case <-params.stop:
 			log.Printf("[%s] Closing", forwarderName)
-			params.ch.Close()
-			params.conn.Close()
+			closeRabbitMQ(params.conn, params.ch)
 			return errors.New(closedBySupervisorMessage)
 		}
 	}
