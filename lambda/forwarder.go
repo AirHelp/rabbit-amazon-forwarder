@@ -2,14 +2,13 @@ package lambda
 
 import (
 	"errors"
-	"log"
-
 	"github.com/AirHelp/rabbit-amazon-forwarder/config"
 	"github.com/AirHelp/rabbit-amazon-forwarder/forwarder"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/lambda"
 	"github.com/aws/aws-sdk-go/service/lambda/lambdaiface"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -33,7 +32,7 @@ func CreateForwarder(entry config.AmazonEntry, lambdaClient ...lambdaiface.Lambd
 		client = lambda.New(session.Must(session.NewSession()))
 	}
 	forwarder := Forwarder{entry.Name, client, entry.Target}
-	log.Print("Created forwarder: ", forwarder.Name())
+	log.WithFields(log.Fields{"forwarderName": forwarder.Name()}).Info("Created forwarder")
 	return forwarder
 }
 
@@ -53,13 +52,19 @@ func (f Forwarder) Push(message string) error {
 	}
 	resp, err := f.lambdaClient.Invoke(params)
 	if err != nil {
-		log.Printf("[%s] Could not forward message. Error: %s", f.Name(), err.Error())
+		log.WithFields(log.Fields{
+			"forwarderName": f.Name(),
+			"error":         err.Error()}).Error("Could not forward message")
 		return err
 	}
 	if resp.FunctionError != nil {
-		log.Printf("[%s] Could not forward message. Function error: %s", f.Name(), *resp.FunctionError)
+		log.WithFields(log.Fields{
+			"forwarderName": f.Name(),
+			"functionError": *resp.FunctionError}).Errorf("Could not forward message")
 		return errors.New(*resp.FunctionError)
 	}
-	log.Printf("[%s] Forward succeeded. Code:%d, body:%s", f.Name(), resp.StatusCode, string(resp.Payload))
+	log.WithFields(log.Fields{
+		"forwarderName": f.Name(),
+		"statusCode":    resp.StatusCode}).Info("Forward succeeded")
 	return nil
 }

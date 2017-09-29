@@ -2,8 +2,8 @@ package mapping
 
 import (
 	"encoding/json"
+	log "github.com/sirupsen/logrus"
 	"io/ioutil"
-	"log"
 	"os"
 
 	"github.com/AirHelp/rabbit-amazon-forwarder/config"
@@ -56,7 +56,7 @@ func (c Client) Load() (map[consumer.Client]forwarder.Client, error) {
 	if err = json.Unmarshal(data, &pairsList); err != nil {
 		return consumerForwarderMap, err
 	}
-	log.Print("Loading consumer->forwader pairs")
+	log.Info("Loading consumer - forwarder pairs")
 	for _, pair := range pairsList {
 		consumer := c.helper.createConsumer(pair.Source)
 		forwarder := c.helper.createForwarder(pair.Destination)
@@ -67,12 +67,14 @@ func (c Client) Load() (map[consumer.Client]forwarder.Client, error) {
 
 func (c Client) loadFile() ([]byte, error) {
 	filePath := os.Getenv(config.MappingFile)
-	log.Print("Loading mapping file: ", filePath)
+	log.WithFields(log.Fields{"mappingFile": filePath}).Info("Loading mapping file")
 	return ioutil.ReadFile(filePath)
 }
 
 func (h helperImpl) createConsumer(entry config.RabbitEntry) consumer.Client {
-	log.Printf("Creating consumer: [%s, %s]", entry.Type, entry.Name)
+	log.WithFields(log.Fields{
+		"consumerType": entry.Type,
+		"consumerName": entry.Name}).Info("Creating consumer")
 	switch entry.Type {
 	case rabbitmq.Type:
 		return rabbitmq.CreateConsumer(entry)
@@ -81,7 +83,9 @@ func (h helperImpl) createConsumer(entry config.RabbitEntry) consumer.Client {
 }
 
 func (h helperImpl) createForwarder(entry config.AmazonEntry) forwarder.Client {
-	log.Printf("Creating forwarder: [%s, %s]", entry.Type, entry.Name)
+	log.WithFields(log.Fields{
+		"forwarderType": entry.Type,
+		"forwarderName": entry.Name}).Info("Creating forwarder")
 	switch entry.Type {
 	case sns.Type:
 		return sns.CreateForwarder(entry)

@@ -3,7 +3,7 @@ package rabbitmq
 import (
 	"errors"
 	"fmt"
-	"log"
+	log "github.com/sirupsen/logrus"
 	"time"
 
 	"github.com/AirHelp/rabbit-amazon-forwarder/config"
@@ -40,7 +40,7 @@ type workerParams struct {
 	ch        *amqp.Channel
 }
 
-// CreateConsumer creates conusmer from string map
+// CreateConsumer creates consumer from string map
 func CreateConsumer(entry config.RabbitEntry) consumer.Client {
 	return Consumer{entry.Name, entry.ConnectionURL, entry.ExchangeName, entry.QueueName, entry.RoutingKey}
 }
@@ -52,11 +52,13 @@ func (c Consumer) Name() string {
 
 // Start start consuming messages from Rabbit queue
 func (c Consumer) Start(forwarder forwarder.Client, check chan bool, stop chan bool) error {
-	log.Print("Starting consumer with params: ", c)
+	log.WithFields(log.Fields{
+		"exchangeName": c.ExchangeName,
+		"queueName":    c.QueueName}).Info("Starting connecting consumer")
 	for {
 		delivery, conn, ch, err := c.initRabbitMQ()
 		if err != nil {
-			log.Print(err)
+			log.Error(err)
 			closeRabbitMQ(conn, ch)
 			time.Sleep(ReconnectRabbitMQInterval * time.Second)
 			continue
@@ -70,15 +72,17 @@ func (c Consumer) Start(forwarder forwarder.Client, check chan bool, stop chan b
 }
 
 func closeRabbitMQ(conn *amqp.Connection, ch *amqp.Channel) {
-	log.Print("Closing RabbitMQ connection and channel")
+	log.Info("Closing RabbitMQ connection and channel")
 	if ch != nil {
 		if err := ch.Close(); err != nil {
-			log.Print("Could not close channel. Error: ", err)
+			log.WithFields(log.Fields{
+				"error": err.Error()}).Error("Could not close channel")
 		}
 	}
 	if conn != nil {
 		if err := conn.Close(); err != nil {
-			log.Print("Could not close connection. Error: ", err)
+			log.WithFields(log.Fields{
+				"error": err.Error()}).Error("Could not close connection")
 		}
 	}
 }
@@ -143,7 +147,9 @@ func (c Consumer) setupExchangesAndQueues(conn *amqp.Connection, ch *amqp.Channe
 
 func (c Consumer) startForwarding(params *workerParams) error {
 	forwarderName := params.forwarder.Name()
-	log.Printf("[%s] Started forwarding messages to %s", c.Name(), forwarderName)
+	log.WithFields(log.Fields{
+		"consumerName":  c.Name(),
+		"forwarderName": forwarderName}).Info("Started forwarding messages")
 	for {
 		select {
 		case d, ok := <-params.msgs:
@@ -151,23 +157,34 @@ func (c Consumer) startForwarding(params *workerParams) error {
 				closeRabbitMQ(params.conn, params.ch)
 				return errors.New(channelClosedMessage)
 			}
-			log.Printf("[%s] Message to forward: %v", c.Name(), d.MessageId)
+			log.WithFields(log.Fields{
+				"consumerName": c.Name(),
+				"messageID":    d.MessageId}).Info("Message to forward")
 			err := params.forwarder.Push(string(d.Body))
 			if err != nil {
-				log.Printf("[%s] Could not forward message. Error: %v", forwarderName, err)
+				log.WithFields(log.Fields{
+					"forwarderName": forwarderName,
+					"error":         err.Error()}).Error("Could not forward message")
 				if err = d.Reject(false); err != nil {
-					log.Printf("[%s] Could not reject message. Error: %v", forwarderName, err)
+					log.WithFields(log.Fields{
+						"forwarderName": forwarderName,
+						"error":         err.Error()}).Error("Could not reject message")
 				}
 
 			} else {
 				if err := d.Ack(true); err != nil {
-					log.Println("Could not ack message with id:", d.MessageId)
+					log.WithFields(log.Fields{
+						"forwarderName": forwarderName,
+						"error":         err.Error(),
+						"messageID":     d.MessageId}).Error("Could not ack message")
 				}
 			}
 		case <-params.check:
-			log.Printf("[%s] Checking", forwarderName)
+			log.WithFields(log.Fields{
+				"forwarderName": forwarderName}).Info("Checking")
 		case <-params.stop:
-			log.Printf("[%s] Closing", forwarderName)
+			log.WithFields(log.Fields{
+				"forwarderName": forwarderName}).Info("Closing")
 			closeRabbitMQ(params.conn, params.ch)
 			return errors.New(closedBySupervisorMessage)
 		}

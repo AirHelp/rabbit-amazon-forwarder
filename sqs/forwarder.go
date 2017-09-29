@@ -2,7 +2,7 @@ package sqs
 
 import (
 	"errors"
-	"log"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/AirHelp/rabbit-amazon-forwarder/config"
 	"github.com/AirHelp/rabbit-amazon-forwarder/forwarder"
@@ -33,7 +33,7 @@ func CreateForwarder(entry config.AmazonEntry, sqsClient ...sqsiface.SQSAPI) for
 		client = sqs.New(session.Must(session.NewSession()))
 	}
 	forwarder := Forwarder{entry.Name, client, entry.Target}
-	log.Print("Created forwarder: ", forwarder.Name())
+	log.WithFields(log.Fields{"forwarderName": forwarder.Name()}).Info("Created forwarder")
 	return forwarder
 }
 
@@ -55,9 +55,13 @@ func (f Forwarder) Push(message string) error {
 	resp, err := f.sqsClient.SendMessage(params)
 
 	if err != nil {
-		log.Printf("[%s] Could not forward message. Error: %s", f.Name(), err.Error())
+		log.WithFields(log.Fields{
+			"forwarderName": f.Name(),
+			"error":         err.Error()}).Error("Could not forward message")
 		return err
 	}
-	log.Printf("[%s] Forward succeeded. Response: %s", f.Name(), resp)
+	log.WithFields(log.Fields{
+		"forwarderName": f.Name(),
+		"responseID":    resp.MessageId}).Info("Forward succeeded")
 	return nil
 }
