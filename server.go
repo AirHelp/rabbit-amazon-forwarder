@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-const(
+const (
 	LogLevel = "LOG_LEVEL"
 )
 
@@ -29,14 +29,14 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
-func createLogger(){
+func createLogger() {
 	log.SetFormatter(&log.JSONFormatter{})
 	log.SetOutput(os.Stdout)
 	log.SetLevel(log.InfoLevel)
-	if logLevel := os.Getenv(LogLevel); logLevel != ""{
-		if level, err := log.ParseLevel(logLevel); err !=nil {
+	if logLevel := os.Getenv(LogLevel); logLevel != "" {
+		if level, err := log.ParseLevel(logLevel); err != nil {
 			log.Fatal(err)
-		}else{
+		} else {
 			log.SetLevel(level)
 		}
 	}
