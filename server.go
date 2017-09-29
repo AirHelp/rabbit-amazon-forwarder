@@ -9,18 +9,16 @@ import (
 )
 
 func main() {
-	log.SetFormatter(&log.TextFormatter{})
+	log.SetFormatter(&log.JSONFormatter{})
 	log.SetOutput(os.Stdout)
 
 	consumerForwarderMap, err := mapping.New().Load()
 	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err.Error()}).Fatalf("Could not load consumer - forwarder pairs. Error: " + err.Error())
+		log.WithField("error", err.Error()).Fatalf("Could not load consumer - forwarder pairs")
 	}
 	supervisor := supervisor.New(consumerForwarderMap)
 	if err := supervisor.Start(); err != nil {
-		log.WithFields(log.Fields{
-			"error": err.Error()}).Fatal("Could not start supervisor")
+		log.WithField("error", err.Error()).Fatal("Could not start supervisor")
 	}
 	http.HandleFunc("/restart", supervisor.Restart)
 	http.HandleFunc("/health", supervisor.Check)

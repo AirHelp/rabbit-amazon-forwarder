@@ -75,14 +75,12 @@ func closeRabbitMQ(conn *amqp.Connection, ch *amqp.Channel) {
 	log.Info("Closing RabbitMQ connection and channel")
 	if ch != nil {
 		if err := ch.Close(); err != nil {
-			log.WithFields(log.Fields{
-				"error": err.Error()}).Error("Could not close channel")
+			log.WithField("error", err.Error()).Error("Could not close channel")
 		}
 	}
 	if conn != nil {
 		if err := conn.Close(); err != nil {
-			log.WithFields(log.Fields{
-				"error": err.Error()}).Error("Could not close connection")
+			log.WithField("error", err.Error()).Error("Could not close connection")
 		}
 	}
 }
@@ -180,11 +178,9 @@ func (c Consumer) startForwarding(params *workerParams) error {
 				}
 			}
 		case <-params.check:
-			log.WithFields(log.Fields{
-				"forwarderName": forwarderName}).Info("Checking")
+			log.WithField("forwarderName", forwarderName).Info("Checking")
 		case <-params.stop:
-			log.WithFields(log.Fields{
-				"forwarderName": forwarderName}).Info("Closing")
+			log.WithField("forwarderName", forwarderName).Info("Closing")
 			closeRabbitMQ(params.conn, params.ch)
 			return errors.New(closedBySupervisorMessage)
 		}

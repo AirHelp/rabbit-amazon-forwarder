@@ -32,7 +32,7 @@ func CreateForwarder(entry config.AmazonEntry, lambdaClient ...lambdaiface.Lambd
 		client = lambda.New(session.Must(session.NewSession()))
 	}
 	forwarder := Forwarder{entry.Name, client, entry.Target}
-	log.WithFields(log.Fields{"forwarderName": forwarder.Name()}).Info("Created forwarder")
+	log.WithField("forwarderName", forwarder.Name()).Info("Created forwarder")
 	return forwarder
 }
 

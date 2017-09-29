@@ -62,8 +62,7 @@ func (c *Client) Check(w http.ResponseWriter, r *http.Request) {
 	if accept := r.Header.Get(acceptHeader); accept != "" &&
 		!strings.Contains(accept, jsonType) &&
 		!strings.Contains(accept, acceptAll) {
-		log.WithFields(log.Fields{
-			"acceptHeader": accept}).Warn("Wrong Accept header")
+		log.WithField("acceptHeader", accept).Warn("Wrong Accept header")
 		notAcceptableResponse(w)
 		return
 	}

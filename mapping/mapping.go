@@ -67,7 +67,7 @@ func (c Client) Load() (map[consumer.Client]forwarder.Client, error) {
 
 func (c Client) loadFile() ([]byte, error) {
 	filePath := os.Getenv(config.MappingFile)
-	log.WithFields(log.Fields{"mappingFile": filePath}).Info("Loading mapping file")
+	log.WithField("mappingFile", filePath).Info("Loading mapping file")
 	return ioutil.ReadFile(filePath)
 }
 

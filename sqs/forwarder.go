@@ -33,7 +33,7 @@ func CreateForwarder(entry config.AmazonEntry, sqsClient ...sqsiface.SQSAPI) for
 		client = sqs.New(session.Must(session.NewSession()))
 	}
 	forwarder := Forwarder{entry.Name, client, entry.Target}
-	log.WithFields(log.Fields{"forwarderName": forwarder.Name()}).Info("Created forwarder")
+	log.WithField("forwarderName", forwarder.Name()).Info("Created forwarder")
 	return forwarder
 }
 
