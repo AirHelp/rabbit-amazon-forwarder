@@ -8,9 +8,12 @@ import (
 	"os"
 )
 
+const(
+	LogLevel = "LOG_LEVEL"
+)
+
 func main() {
-	log.SetFormatter(&log.JSONFormatter{})
-	log.SetOutput(os.Stdout)
+	createLogger()
 
 	consumerForwarderMap, err := mapping.New().Load()
 	if err != nil {
@@ -24,4 +27,17 @@ func main() {
 	http.HandleFunc("/health", supervisor.Check)
 	log.Info("Starting http server")
 	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+
+func createLogger(){
+	log.SetFormatter(&log.JSONFormatter{})
+	log.SetOutput(os.Stdout)
+	log.SetLevel(log.InfoLevel)
+	if logLevel := os.Getenv(LogLevel); logLevel != ""{
+		if level, err := log.ParseLevel(logLevel); err !=nil {
+			log.Fatal(err)
+		}else{
+			log.SetLevel(level)
+		}
+	}
 }
