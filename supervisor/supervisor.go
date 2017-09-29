@@ -3,7 +3,7 @@ package supervisor
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strings"
 	"time"
@@ -18,7 +18,6 @@ const (
 	notSupported = "not supported response format"
 	acceptHeader = "Accept"
 	contentType  = "Content-Type"
-	errorRestart = "could not restart workers"
 	acceptAll    = "*/*"
 )
 
@@ -51,7 +50,9 @@ func (c *Client) Start() error {
 		channel := makeConsumerChannel(forwarder.Name())
 		c.consumers[forwarder.Name()] = channel
 		go consumer.Start(forwarder, channel.check, channel.stop)
-		log.Printf("Started consumer:%s with forwader:%s", consumer.Name(), forwarder.Name())
+		log.WithFields(log.Fields{
+			"consumerName":  consumer.Name(),
+			"forwarderName": forwarder.Name()}).Info("Started consumer with forwarder")
 	}
 	return nil
 }
@@ -61,8 +62,8 @@ func (c *Client) Check(w http.ResponseWriter, r *http.Request) {
 	if accept := r.Header.Get(acceptHeader); accept != "" &&
 		!strings.Contains(accept, jsonType) &&
 		!strings.Contains(accept, acceptAll) {
-		log.Print("Wrong Accept header: ", accept)
-		notAccpetableResponse(w)
+		log.WithField("acceptHeader", accept).Warn("Wrong Accept header")
+		notAcceptableResponse(w)
 		return
 	}
 	stopped := 0
@@ -89,7 +90,7 @@ func (c *Client) Check(w http.ResponseWriter, r *http.Request) {
 func (c *Client) Restart(w http.ResponseWriter, r *http.Request) {
 	c.stop()
 	if err := c.Start(); err != nil {
-		log.Print(err)
+		log.Error(err)
 		errorResponse(w, "")
 		return
 	}
@@ -114,12 +115,12 @@ func errorResponse(w http.ResponseWriter, message string) {
 	w.Write([]byte(message))
 }
 
-func notAccpetableResponse(w http.ResponseWriter) {
+func notAcceptableResponse(w http.ResponseWriter) {
 	w.Header().Set(contentType, jsonType)
 	w.WriteHeader(406)
 	bytes, err := json.Marshal(response{Healthy: false, Message: notSupported})
 	if err != nil {
-		log.Print(err)
+		log.Error(err)
 		w.WriteHeader(500)
 		return
 	}
@@ -131,7 +132,7 @@ func successResponse(w http.ResponseWriter) {
 	w.WriteHeader(200)
 	bytes, err := json.Marshal(response{Healthy: true, Message: success})
 	if err != nil {
-		log.Print(err)
+		log.Error(err)
 		w.WriteHeader(200)
 		return
 	}
