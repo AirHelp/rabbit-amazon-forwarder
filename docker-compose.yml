@@ -1,4 +1,4 @@
-version: '2'
+version: '3.1'
 services:
   rabbitamazonforwarder:
     image: airhelp/rabbit-amazon-forwarder
@@ -11,3 +11,8 @@ services:
       AWS_REGION: ${AWS_REGION}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+  tests:
+    build:
+      context: .
+      dockerfile: Dockerfile-test
+    command: go test ./...

@@ -84,6 +84,12 @@ Using docker-compose:
 docker-compose up
 ```
 
+## Test
+```
+docker-compose build --pull
+docker-compose run --rm tests
+```
+
 # Release
 
 ```bash
