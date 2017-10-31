@@ -5,7 +5,6 @@ push: test build
 	docker push airhelp/rabbit-amazon-forwarder
 
 test:
-	docker-compose build --pull
 	docker-compose run --rm tests
 
 dev:
