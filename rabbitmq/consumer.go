@@ -167,6 +167,7 @@ func (c Consumer) startForwarding(params *workerParams) error {
 					log.WithFields(log.Fields{
 						"forwarderName": forwarderName,
 						"error":         err.Error()}).Error("Could not reject message")
+					return err
 				}
 
 			} else {
@@ -175,6 +176,7 @@ func (c Consumer) startForwarding(params *workerParams) error {
 						"forwarderName": forwarderName,
 						"error":         err.Error(),
 						"messageID":     d.MessageId}).Error("Could not ack message")
+					return err
 				}
 			}
 		case <-params.check:
