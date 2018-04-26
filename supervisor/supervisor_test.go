@@ -7,8 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/AirHelp/rabbit-amazon-forwarder/consumer"
 	"github.com/AirHelp/rabbit-amazon-forwarder/forwarder"
+	"github.com/AirHelp/rabbit-amazon-forwarder/mapping"
 )
 
 func TestStart(t *testing.T) {
@@ -97,11 +97,11 @@ func TestCheck(t *testing.T) {
 	}
 }
 
-func prepareConsumers() map[consumer.Client]forwarder.Client {
-	consumers := make(map[consumer.Client]forwarder.Client)
-	consumers[MockRabbitConsumer{"rabbit1"}] = MockSNSForwarder{"sns"}
-	consumers[MockRabbitConsumer{"rabbit2"}] = MockSQSForwarder{"sqs"}
-	consumers[MockRabbitConsumer{"rabbit3"}] = MockLambdaForwarder{"lambda"}
+func prepareConsumers() []mapping.ConsumerForwarderMap {
+	var consumers []mapping.ConsumerForwarderMap
+	consumers = append(consumers, mapping.ConsumerForwarderMap{Consumer: MockRabbitConsumer{"rabbit"}, Forwarder: MockSNSForwarder{"sns"}})
+	consumers = append(consumers, mapping.ConsumerForwarderMap{Consumer: MockRabbitConsumer{"rabbit"}, Forwarder: MockSQSForwarder{"sqs"}})
+	consumers = append(consumers, mapping.ConsumerForwarderMap{Consumer: MockRabbitConsumer{"rabbit"}, Forwarder: MockLambdaForwarder{"lambda"}})
 	return consumers
 }
 

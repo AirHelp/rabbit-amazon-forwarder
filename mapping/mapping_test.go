@@ -22,7 +22,7 @@ const (
 func TestLoad(t *testing.T) {
 	os.Setenv(config.MappingFile, "../tests/rabbit_to_sns.json")
 	client := New(MockMappingHelper{})
-	var consumerForwarderMap map[consumer.Client]forwarder.Client
+	var consumerForwarderMap []ConsumerForwarderMap
 	var err error
 	if consumerForwarderMap, err = client.Load(); err != nil {
 		t.Errorf("could not load mapping and start mocked rabbit->sns pair: %s", err.Error())

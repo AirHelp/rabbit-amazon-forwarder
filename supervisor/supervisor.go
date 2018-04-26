@@ -3,13 +3,13 @@ package supervisor
 import (
 	"encoding/json"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/AirHelp/rabbit-amazon-forwarder/consumer"
-	"github.com/AirHelp/rabbit-amazon-forwarder/forwarder"
+	log "github.com/sirupsen/logrus"
+
+	"github.com/AirHelp/rabbit-amazon-forwarder/mapping"
 )
 
 const (
@@ -34,25 +34,25 @@ type consumerChannel struct {
 
 // Client supervisor client
 type Client struct {
-	mappings  map[consumer.Client]forwarder.Client
+	mappings  []mapping.ConsumerForwarderMap
 	consumers map[string]*consumerChannel
 }
 
 // New client for supervisor
-func New(consumerForwarderMap map[consumer.Client]forwarder.Client) Client {
+func New(consumerForwarderMap []mapping.ConsumerForwarderMap) Client {
 	return Client{mappings: consumerForwarderMap}
 }
 
 // Start starts supervisor
 func (c *Client) Start() error {
 	c.consumers = make(map[string]*consumerChannel)
-	for consumer, forwarder := range c.mappings {
-		channel := makeConsumerChannel(forwarder.Name())
-		c.consumers[forwarder.Name()] = channel
-		go consumer.Start(forwarder, channel.check, channel.stop)
+	for _, forwarderMap := range c.mappings {
+		channel := makeConsumerChannel(forwarderMap.Forwarder.Name())
+		c.consumers[forwarderMap.Forwarder.Name()] = channel
+		go forwarderMap.Consumer.Start(forwarderMap.Forwarder, channel.check, channel.stop)
 		log.WithFields(log.Fields{
-			"consumerName":  consumer.Name(),
-			"forwarderName": forwarder.Name()}).Info("Started consumer with forwarder")
+			"consumerName":  forwarderMap.Consumer.Name(),
+			"forwarderName": forwarderMap.Forwarder.Name()}).Info("Started consumer with forwarder")
 	}
 	return nil
 }
