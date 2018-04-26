@@ -34,7 +34,7 @@ Sample of RabbitMQ -> SNS mapping file. All fields are required. Samples are loc
       "connection" : "amqp://guest:guest@localhost:5672/",
       "topic" : "amq.topic",
       "queue" : "test-queue",
-      "routing" : "#"
+      "routingKeys" : ["#"]
     },
     "destination" : {
       "type" : "SNS",
