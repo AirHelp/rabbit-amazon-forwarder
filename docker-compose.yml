@@ -16,8 +16,6 @@ services:
       context: .
       dockerfile: Dockerfile-test
     command: go test ./...
-    volumes:
-      - ./:/go/src/github.com/AirHelp/rabbit-amazon-forwarder
     depends_on:
       - fmt
       - vet
@@ -26,12 +24,8 @@ services:
       context: .
       dockerfile: Dockerfile-test
     command: go vet -v ./...
-    volumes:
-      - .:/go/src/github.com/AirHelp/rabbit-amazon-forwarder
   fmt:
     build:
       context: .
       dockerfile: Dockerfile-test
     command: gofmt ./...
-    volumes:
-      - .:/go/src/github.com/AirHelp/rabbit-amazon-forwarder

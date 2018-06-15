@@ -62,7 +62,7 @@ When making subscription to SNS -> SQS/HTTP/HTTPS set `Raw message delivery` to 
 ## Build docker image
 
 ```bash
-make release
+make build
 ```
 
 ## Run
