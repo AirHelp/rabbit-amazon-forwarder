@@ -34,25 +34,25 @@ type consumerChannel struct {
 
 // Client supervisor client
 type Client struct {
-	mappings  []mapping.ConsumerForwarderMap
+	mappings  []mapping.ConsumerForwarderMapping
 	consumers map[string]*consumerChannel
 }
 
 // New client for supervisor
-func New(consumerForwarderMap []mapping.ConsumerForwarderMap) Client {
-	return Client{mappings: consumerForwarderMap}
+func New(consumerForwarderMapping []mapping.ConsumerForwarderMapping) Client {
+	return Client{mappings: consumerForwarderMapping}
 }
 
 // Start starts supervisor
 func (c *Client) Start() error {
 	c.consumers = make(map[string]*consumerChannel)
-	for _, forwarderMap := range c.mappings {
-		channel := makeConsumerChannel(forwarderMap.Forwarder.Name())
-		c.consumers[forwarderMap.Forwarder.Name()] = channel
-		go forwarderMap.Consumer.Start(forwarderMap.Forwarder, channel.check, channel.stop)
+	for _, mappingEntry := range c.mappings {
+		channel := makeConsumerChannel(mappingEntry.Forwarder.Name())
+		c.consumers[mappingEntry.Forwarder.Name()] = channel
+		go mappingEntry.Consumer.Start(mappingEntry.Forwarder, channel.check, channel.stop)
 		log.WithFields(log.Fields{
-			"consumerName":  forwarderMap.Consumer.Name(),
-			"forwarderName": forwarderMap.Forwarder.Name()}).Info("Started consumer with forwarder")
+			"consumerName":  mappingEntry.Consumer.Name(),
+			"forwarderName": mappingEntry.Forwarder.Name()}).Info("Started consumer with forwarder")
 	}
 	return nil
 }

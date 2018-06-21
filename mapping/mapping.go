@@ -34,8 +34,8 @@ type Helper interface {
 	createForwarder(entry config.AmazonEntry) forwarder.Client
 }
 
-// ConsumerForwarderMap mapping for consumers and forwarders
-type ConsumerForwarderMap struct {
+// ConsumerForwarderMapping mapping for consumers and forwarders
+type ConsumerForwarderMapping struct {
 	Consumer  consumer.Client
 	Forwarder forwarder.Client
 }
@@ -53,23 +53,23 @@ func New(helpers ...Helper) Client {
 }
 
 // Load loads mappings
-func (c Client) Load() ([]ConsumerForwarderMap, error) {
-	var consumerForwarderMap []ConsumerForwarderMap
+func (c Client) Load() ([]ConsumerForwarderMapping, error) {
+	var consumerForwarderMapping []ConsumerForwarderMapping
 	data, err := c.loadFile()
 	if err != nil {
-		return consumerForwarderMap, err
+		return consumerForwarderMapping, err
 	}
 	var pairsList pairs
 	if err = json.Unmarshal(data, &pairsList); err != nil {
-		return consumerForwarderMap, err
+		return consumerForwarderMapping, err
 	}
 	log.Info("Loading consumer - forwarder pairs")
 	for _, pair := range pairsList {
 		consumer := c.helper.createConsumer(pair.Source)
 		forwarder := c.helper.createForwarder(pair.Destination)
-		consumerForwarderMap = append(consumerForwarderMap, ConsumerForwarderMap{consumer, forwarder})
+		consumerForwarderMapping = append(consumerForwarderMapping, ConsumerForwarderMapping{consumer, forwarder})
 	}
-	return consumerForwarderMap, nil
+	return consumerForwarderMapping, nil
 }
 
 func (c Client) loadFile() ([]byte, error) {

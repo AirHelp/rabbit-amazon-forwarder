@@ -97,11 +97,11 @@ func TestCheck(t *testing.T) {
 	}
 }
 
-func prepareConsumers() []mapping.ConsumerForwarderMap {
-	var consumers []mapping.ConsumerForwarderMap
-	consumers = append(consumers, mapping.ConsumerForwarderMap{Consumer: MockRabbitConsumer{"rabbit"}, Forwarder: MockSNSForwarder{"sns"}})
-	consumers = append(consumers, mapping.ConsumerForwarderMap{Consumer: MockRabbitConsumer{"rabbit"}, Forwarder: MockSQSForwarder{"sqs"}})
-	consumers = append(consumers, mapping.ConsumerForwarderMap{Consumer: MockRabbitConsumer{"rabbit"}, Forwarder: MockLambdaForwarder{"lambda"}})
+func prepareConsumers() []mapping.ConsumerForwarderMapping {
+	var consumers []mapping.ConsumerForwarderMapping
+	consumers = append(consumers, mapping.ConsumerForwarderMapping{Consumer: MockRabbitConsumer{"rabbit"}, Forwarder: MockSNSForwarder{"sns"}})
+	consumers = append(consumers, mapping.ConsumerForwarderMapping{Consumer: MockRabbitConsumer{"rabbit"}, Forwarder: MockSQSForwarder{"sqs"}})
+	consumers = append(consumers, mapping.ConsumerForwarderMapping{Consumer: MockRabbitConsumer{"rabbit"}, Forwarder: MockLambdaForwarder{"lambda"}})
 	return consumers
 }
 

@@ -22,13 +22,13 @@ const (
 func TestLoad(t *testing.T) {
 	os.Setenv(config.MappingFile, "../tests/rabbit_to_sns.json")
 	client := New(MockMappingHelper{})
-	var consumerForwarderMap []ConsumerForwarderMap
+	var consumerForwarderMapping []ConsumerForwarderMapping
 	var err error
-	if consumerForwarderMap, err = client.Load(); err != nil {
+	if consumerForwarderMapping, err = client.Load(); err != nil {
 		t.Errorf("could not load mapping and start mocked rabbit->sns pair: %s", err.Error())
 	}
-	if len(consumerForwarderMap) != 1 {
-		t.Errorf("wrong consumerForwarderMap size, expected 1, got %d", len(consumerForwarderMap))
+	if len(consumerForwarderMapping) != 1 {
+		t.Errorf("wrong consumerForwarderMapping size, expected 1, got %d", len(consumerForwarderMapping))
 	}
 }
 
