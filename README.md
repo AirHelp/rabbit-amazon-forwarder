@@ -55,6 +55,20 @@ export AWS_ACCESS_KEY_ID=access_key
 export AWS_SECRET_ACCESS_KEY=secret_key
 ```
 
+#### Using TLS with rabbit
+
+Specify amqps for the rabbit connection ub the mapping file:
+```
+ "connection" : "amqps://guest:guest@localhost:5671/",
+```
+
+Additional environment variables for working with TLS and rabbit:
+```
+export CA_CERT=/certs/ca_certificate.pem
+export CERT_FILE=/certs/client_certificate.pem
+export KEY_FILE=/certs/client_key.pem
+```
+
 ### Amazon configuration
 
 When making subscription to SNS -> SQS/HTTP/HTTPS set `Raw message delivery` to ensure that json messages are not escaped.

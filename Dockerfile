@@ -9,6 +9,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o rabbit-amazon-for
 
 FROM alpine:3.6
 RUN mkdir -p /config
+RUN mkdir -p /certs
 RUN apk --update upgrade && \
     apk add curl ca-certificates && \
     update-ca-certificates && \
