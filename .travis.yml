@@ -4,5 +4,4 @@ services:
   - docker
 
 script:
-  - docker-compose --version
   - docker-compose run --rm tests
