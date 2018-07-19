@@ -3,15 +3,12 @@ package rabbitmq
 import (
 	"errors"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"time"
-	"crypto/tls"
-    "crypto/x509"
-	"io/ioutil"
-	"os"
-	"strings"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/AirHelp/rabbit-amazon-forwarder/config"
+	"github.com/AirHelp/rabbit-amazon-forwarder/connector"
 	"github.com/AirHelp/rabbit-amazon-forwarder/consumer"
 	"github.com/AirHelp/rabbit-amazon-forwarder/forwarder"
 	"github.com/streadway/amqp"
@@ -112,24 +109,8 @@ func (c Consumer) connect() (<-chan amqp.Delivery, *amqp.Connection, *amqp.Chann
 }
 
 func createConnection(connectionURL string) (*amqp.Connection, error) {
-	if strings.Contains(connectionURL, "amqps") {
-		cfg := new(tls.Config)
-		cfg.RootCAs = x509.NewCertPool()
-		if ca, err := ioutil.ReadFile(os.Getenv(config.CaCertFile)); err == nil {
-			cfg.RootCAs.AppendCertsFromPEM(ca)
-		} else {
-		    log.WithField("error", err.Error()).Error("File not found")
-		}
-		if cert, err := tls.LoadX509KeyPair(os.Getenv(config.CertFile), os.Getenv(config.KeyFile)); err == nil {
-			cfg.Certificates = append(cfg.Certificates, cert)
-		} else {
-            log.WithField("error", err.Error()).Error("File not found")
-        }
-		return amqp.DialTLS(connectionURL, cfg)
-	} else {
-        log.Info("Dialing in")
-		return amqp.Dial(connectionURL)
-	}
+	rabbitConnector := connector.CreateConnector(connectionURL)
+	return rabbitConnector.CreateConnection(connectionURL)
 }
 
 func (c Consumer) setupExchangesAndQueues(conn *amqp.Connection, ch *amqp.Channel) (<-chan amqp.Delivery, *amqp.Connection, *amqp.Channel, error) {
