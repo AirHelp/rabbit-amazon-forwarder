@@ -57,6 +57,10 @@ func TestCreateConsumer(t *testing.T) {
 	if consumer.Name() != consumerName {
 		t.Errorf("wrong consumer name, expected %s, found %s", consumerName, consumer.Name())
 	}
+	rabbitConsumer := consumer.(rabbitmq.Consumer)
+	if rabbitConsumer.RabbitConnector == nil {
+		t.Errorf("rabbit consumer should have been set")
+	}
 }
 
 func TestCreateForwarderSNS(t *testing.T) {

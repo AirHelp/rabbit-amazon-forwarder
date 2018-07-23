@@ -2,9 +2,11 @@ package mapping
 
 import (
 	"encoding/json"
-	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
+
+	"github.com/AirHelp/rabbit-amazon-forwarder/connector"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/AirHelp/rabbit-amazon-forwarder/config"
 	"github.com/AirHelp/rabbit-amazon-forwarder/consumer"
@@ -77,7 +79,8 @@ func (h helperImpl) createConsumer(entry config.RabbitEntry) consumer.Client {
 		"consumerName": entry.Name}).Info("Creating consumer")
 	switch entry.Type {
 	case rabbitmq.Type:
-		return rabbitmq.CreateConsumer(entry)
+		rabbitConnector := connector.CreateConnector(entry.ConnectionURL)
+		return rabbitmq.CreateConsumer(entry, rabbitConnector)
 	}
 	return nil
 }

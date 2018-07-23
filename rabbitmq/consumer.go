@@ -25,11 +25,12 @@ const (
 
 // Consumer implementation or RabbitMQ consumer
 type Consumer struct {
-	name          string
-	ConnectionURL string
-	ExchangeName  string
-	QueueName     string
-	RoutingKey    string
+	name            string
+	ConnectionURL   string
+	ExchangeName    string
+	QueueName       string
+	RoutingKey      string
+	RabbitConnector connector.RabbitConnector
 }
 
 // parameters for starting consumer
@@ -43,8 +44,8 @@ type workerParams struct {
 }
 
 // CreateConsumer creates consumer from string map
-func CreateConsumer(entry config.RabbitEntry) consumer.Client {
-	return Consumer{entry.Name, entry.ConnectionURL, entry.ExchangeName, entry.QueueName, entry.RoutingKey}
+func CreateConsumer(entry config.RabbitEntry, rabbitConnector connector.RabbitConnector) consumer.Client {
+	return Consumer{entry.Name, entry.ConnectionURL, entry.ExchangeName, entry.QueueName, entry.RoutingKey, rabbitConnector}
 }
 
 // Name consumer name
@@ -97,7 +98,7 @@ func (c Consumer) initRabbitMQ() (<-chan amqp.Delivery, *amqp.Connection, *amqp.
 }
 
 func (c Consumer) connect() (<-chan amqp.Delivery, *amqp.Connection, *amqp.Channel, error) {
-	conn, err := createConnection(c.ConnectionURL)
+	conn, err := c.RabbitConnector.CreateConnection(c.ConnectionURL)
 	if err != nil {
 		return failOnError(err, "Failed to connect to RabbitMQ")
 	}
@@ -106,11 +107,6 @@ func (c Consumer) connect() (<-chan amqp.Delivery, *amqp.Connection, *amqp.Chann
 		return failOnError(err, "Failed to open a channel")
 	}
 	return nil, conn, ch, nil
-}
-
-func createConnection(connectionURL string) (*amqp.Connection, error) {
-	rabbitConnector := connector.CreateConnector(connectionURL)
-	return rabbitConnector.CreateConnection(connectionURL)
 }
 
 func (c Consumer) setupExchangesAndQueues(conn *amqp.Connection, ch *amqp.Channel) (<-chan amqp.Delivery, *amqp.Connection, *amqp.Channel, error) {

@@ -83,7 +83,7 @@ func (c *BasicRabbitConnector) CreateConnection(connectionURL string) (*amqp.Con
 }
 
 type TlsRabbitConnector struct {
-	config        *tls.Config
+	tlsConfig     *tls.Config
 	fileReader    FileReader
 	certPoolMaker CertPoolMaker
 	keyLoader     KeyLoader
@@ -92,18 +92,18 @@ type TlsRabbitConnector struct {
 
 func (c *TlsRabbitConnector) CreateConnection(connectionURL string) (*amqp.Connection, error) {
 	log.Info("Dialing in via TLS")
-	c.config.RootCAs = c.certPoolMaker.NewCertPool()
+	c.tlsConfig.RootCAs = c.certPoolMaker.NewCertPool()
 	if ca, err := c.fileReader.ReadFile(os.Getenv(config.CaCertFile)); err == nil {
-		c.config.RootCAs.AppendCertsFromPEM(ca)
+		c.tlsConfig.RootCAs.AppendCertsFromPEM(ca)
 	} else {
 		log.WithField("error", err.Error()).Error("File not found")
 	}
 	if cert, err := c.keyLoader.LoadKeyPair(os.Getenv(config.CertFile), os.Getenv(config.KeyFile)); err == nil {
-		c.config.Certificates = append(c.config.Certificates, cert)
+		c.tlsConfig.Certificates = append(c.tlsConfig.Certificates, cert)
 	} else {
 		log.WithField("error", err.Error()).Error("File not found")
 	}
-	return c.tlsDialer.DialTLS(connectionURL, c.config)
+	return c.tlsDialer.DialTLS(connectionURL, c.tlsConfig)
 }
 
 func CreateBasicRabbitConnector() *BasicRabbitConnector {
@@ -114,7 +114,7 @@ func CreateBasicRabbitConnector() *BasicRabbitConnector {
 
 func CreateTlsRabbitConnector() *TlsRabbitConnector {
 	return &TlsRabbitConnector{
-		config:        new(tls.Config),
+		tlsConfig:     new(tls.Config),
 		fileReader:    &IOFileReader{},
 		certPoolMaker: &X509CertPoolMaker{},
 		keyLoader:     &X509KeyPairLoader{},
