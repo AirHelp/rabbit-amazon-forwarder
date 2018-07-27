@@ -93,10 +93,8 @@ type TlsRabbitConnector struct {
 func (c *TlsRabbitConnector) CreateConnection(connectionURL string) (*amqp.Connection, error) {
 	log.Info("Dialing in via TLS")
 	c.TlsConfig.RootCAs = c.CertPoolMaker.NewCertPool()
-	log.Info("1")
 	if ca, err := c.FileReader.ReadFile(os.Getenv(config.CaCertFile)); err == nil {
 		c.TlsConfig.RootCAs.AppendCertsFromPEM(ca)
-		log.Info("2")
 	} else {
 		log.WithField("error", err.Error()).Error("File not found")
 	}
