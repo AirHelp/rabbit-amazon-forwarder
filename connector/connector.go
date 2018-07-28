@@ -56,7 +56,6 @@ type BasicRabbitDialer struct {
 }
 
 func (s *BasicRabbitDialer) Dial(connectionURL string) (*amqp.Connection, error) {
-	log.Info("Dialing in")
 	return amqp.Dial(connectionURL)
 }
 
@@ -95,19 +94,25 @@ type TlsRabbitConnector struct {
 func (c *TlsRabbitConnector) CreateConnection(connectionURL string) (*amqp.Connection, error) {
 	log.Info("Dialing in via TLS")
 	caCertFilePath := os.Getenv(config.CaCertFile)
-	if strings.TrimSpace(caCertFilePath) != "" {
-		if ca, err := c.FileReader.ReadFile(caCertFilePath); err == nil {
-			c.TlsConfig.RootCAs = c.CertPoolMaker.NewCertPoolWithAppendedCa(ca)
-		} else {
-			log.WithField("error", err.Error()).Error("Error loading " + caCertFilePath)
-			return nil, err
-		}
+
+	if ca, err := c.FileReader.ReadFile(caCertFilePath); err == nil {
+		c.TlsConfig.RootCAs = c.CertPoolMaker.NewCertPoolWithAppendedCa(ca)
+	} else {
+		log.WithFields(log.Fields{
+			"error":           err.Error(),
+			config.CaCertFile: caCertFilePath}).Info("Error loading CA Cert file")
+		return nil, err
 	}
 
-	if cert, err := c.KeyLoader.LoadKeyPair(os.Getenv(config.CertFile), os.Getenv(config.KeyFile)); err == nil {
+	certFilePath := os.Getenv(config.CertFile)
+	keyFilePath := os.Getenv(config.KeyFile)
+	if cert, err := c.KeyLoader.LoadKeyPair(certFilePath, keyFilePath); err == nil {
 		c.TlsConfig.Certificates = append(c.TlsConfig.Certificates, cert)
 	} else {
-		log.WithField("error", err.Error())
+		log.WithFields(log.Fields{
+			"error":         err.Error(),
+			config.CertFile: certFilePath,
+			config.KeyFile:  keyFilePath}).Info("Error loading client certificates")
 	}
 	return c.TlsDialer.DialTLS(connectionURL, c.TlsConfig)
 }

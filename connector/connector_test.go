@@ -64,21 +64,27 @@ var _ = Describe("Connector", func() {
 			dialer          *MockTlsRabbitDialer
 			tlsConfig       *tls.Config
 			certPoolMaker   *MockCertPoolMaker
+			keyLoader       *MockkeyLoader
 		)
 
 		BeforeEach(func() {
 			os.Setenv(config.CaCertFile, "CaName")
+			os.Setenv(config.CertFile, "CertFile")
+			os.Setenv(config.KeyFile, "KeyFile")
 
 			dialer = &MockTlsRabbitDialer{}
 			fileReader = &MockFileReader{
-				Err:       nil,
+				Error:     nil,
 				DummyFile: []byte("Dummy file"),
 			}
 			tlsConfig = new(tls.Config)
 			certPoolMaker = &MockCertPoolMaker{
 				CertPoolToReturn: x509.NewCertPool(),
 			}
-			rabbitConnector = createTlsConnector(dialer, fileReader, tlsConfig, certPoolMaker)
+			keyLoader = &MockkeyLoader{
+				ReturnedCertificate: tls.Certificate{},
+			}
+			rabbitConnector = createTlsConnector(dialer, fileReader, tlsConfig, certPoolMaker, keyLoader)
 		})
 
 		Context("With no problems creating the connection", func() {
@@ -91,12 +97,17 @@ var _ = Describe("Connector", func() {
 				// assert that file reader loaded the
 				Expect(fileReader.FileNameRead).Should(Equal("CaName"))
 
-				// asert that certs are wired up
+				// asert that ca is added to root ca
 				Expect(certPoolMaker.AppendedCaCert).Should(Equal([]byte("Dummy file")))
 				Expect(tlsConfig.RootCAs).Should(Equal(certPoolMaker.CertPoolToReturn))
 
+				// assert that client certifcate is added
+				Expect(keyLoader.CertFileProvided).Should(Equal("CertFile"))
+				Expect(keyLoader.KeyFileProvided).Should(Equal("KeyFile"))
+				Expect(tlsConfig.Certificates).Should(ContainElement(keyLoader.ReturnedCertificate))
+
 				//assert that connection is created with correct params
-				Expect(dialer.ConnectionUrlProvied).Should(Equal("any amqps url"))
+				Expect(dialer.ConnectionUrlProvided).Should(Equal("any amqps url"))
 				Expect(dialer.TlsConfigProvided).Should(Equal(tlsConfig))
 
 				//assert that the connection is returned
@@ -107,43 +118,38 @@ var _ = Describe("Connector", func() {
 
 		Context("With an error loading the ca certificate", func() {
 			It("Should return an error", func() {
-				fileReader.Err = errors.New("Expected")
+				fileReader.Error = errors.New("Expected")
 				fileReader.DummyFile = nil
 
 				connection, err := rabbitConnector.CreateConnection("any amqp url")
+
 				Expect(connection).Should(BeNil())
-				Expect(err).Should(Equal(fileReader.Err))
+				Expect(err).Should(Equal(fileReader.Error))
 			})
 		})
 
-		Context("With no defined CaCertFile config", func() {
-			It("Should create a connection without adding the CA", func() {
-				os.Unsetenv(config.CaCertFile)
+		Context("With an error loading client certificates", func() {
+			It("Should proceed with creating the connection", func() {
+				// We can leave the error handling to the TLS protocol
+				// and log an error indicating that no keys were loaded
+				var nilCertificate tls.Certificate
 				expectedConnection := createDummyAmqpConnection()
 				dialer.ReturnedConnection = expectedConnection
+				keyLoader.ReturnedCertificate = nilCertificate
+				keyLoader.Error = errors.New("Expected")
 
-				connection, err := rabbitConnector.CreateConnection("any amqp url")
+				connection, err := rabbitConnector.CreateConnection("any amqps url")
 
+				// assert that client certifcate is added
+				Expect(len(tlsConfig.Certificates)).Should(Equal(0))
+
+				//assert that connection is created with correct params
+				Expect(dialer.ConnectionUrlProvided).Should(Equal("any amqps url"))
+				Expect(dialer.TlsConfigProvided).Should(Equal(tlsConfig))
+
+				//assert that the connection is returned
 				Expect(connection).Should(Equal(expectedConnection))
 				Expect(err).Should(BeNil())
-
-				Expect(certPoolMaker.Called).Should(BeFalse())
-			})
-		})
-
-		Context("With a blank CaCertFile config", func() {
-			It("Should create a connection without adding the CA", func() {
-				os.Setenv(config.CaCertFile, " ")
-
-				expectedConnection := createDummyAmqpConnection()
-				dialer.ReturnedConnection = expectedConnection
-
-				connection, err := rabbitConnector.CreateConnection("any amqp url")
-
-				Expect(connection).Should(Equal(expectedConnection))
-				Expect(err).Should(BeNil())
-
-				Expect(certPoolMaker.Called).Should(BeFalse())
 			})
 		})
 	})
@@ -159,43 +165,50 @@ func createTlsConnector(
 	mockDialer connector.TlsRabbitDialer,
 	mockFileReader connector.FileReader,
 	tlsConfig *tls.Config,
-	certPoolMaker connector.CertPoolMaker) *connector.TlsRabbitConnector {
+	certPoolMaker connector.CertPoolMaker,
+	keyLoader connector.KeyLoader) *connector.TlsRabbitConnector {
 	return &connector.TlsRabbitConnector{
 		TlsConfig:     tlsConfig,
 		FileReader:    mockFileReader,
 		CertPoolMaker: certPoolMaker,
-		KeyLoader:     &MockKeyPairLoader{},
+		KeyLoader:     keyLoader,
 		TlsDialer:     mockDialer,
 	}
 }
 
 type MockFileReader struct {
 	FileNameRead string
-	Err          error
+	Error        error
 	DummyFile    []byte
 }
 
 func (i *MockFileReader) ReadFile(filename string) ([]byte, error) {
 	i.FileNameRead = filename
-	return i.DummyFile, i.Err
+	return i.DummyFile, i.Error
 }
 
-type MockKeyPairLoader struct {
+type MockkeyLoader struct {
+	CertFileProvided    string
+	KeyFileProvided     string
+	ReturnedCertificate tls.Certificate
+	Error               error
 }
 
-func (x *MockKeyPairLoader) LoadKeyPair(certFile string, keyFile string) (tls.Certificate, error) {
-	return tls.Certificate{}, nil
+func (x *MockkeyLoader) LoadKeyPair(certFile string, keyFile string) (tls.Certificate, error) {
+	x.CertFileProvided = certFile
+	x.KeyFileProvided = keyFile
+	return x.ReturnedCertificate, x.Error
 }
 
 type MockTlsRabbitDialer struct {
-	ConnectionUrlProvied string
-	TlsConfigProvided    *tls.Config
-	ReturnedConnection   *amqp.Connection
-	Error                error
+	ConnectionUrlProvided string
+	TlsConfigProvided     *tls.Config
+	ReturnedConnection    *amqp.Connection
+	Error                 error
 }
 
 func (s *MockTlsRabbitDialer) DialTLS(connectionURL string, tlsConfig *tls.Config) (*amqp.Connection, error) {
-	s.ConnectionUrlProvied = connectionURL
+	s.ConnectionUrlProvided = connectionURL
 	s.TlsConfigProvided = tlsConfig
 	return s.ReturnedConnection, s.Error
 }
