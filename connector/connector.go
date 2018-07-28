@@ -25,14 +25,16 @@ func (i *IOFileReader) ReadFile(filename string) ([]byte, error) {
 }
 
 type CertPoolMaker interface {
-	NewCertPool() *x509.CertPool
+	NewCertPoolWithAppendedCa(caCert []byte) *x509.CertPool
 }
 
 type X509CertPoolMaker struct {
 }
 
-func (x *X509CertPoolMaker) NewCertPool() *x509.CertPool {
-	return x509.NewCertPool()
+func (x *X509CertPoolMaker) NewCertPoolWithAppendedCa(caCert []byte) *x509.CertPool {
+	certPool := x509.NewCertPool()
+	certPool.AppendCertsFromPEM(caCert)
+	return certPool
 }
 
 type KeyLoader interface {
@@ -92,16 +94,20 @@ type TlsRabbitConnector struct {
 
 func (c *TlsRabbitConnector) CreateConnection(connectionURL string) (*amqp.Connection, error) {
 	log.Info("Dialing in via TLS")
-	c.TlsConfig.RootCAs = c.CertPoolMaker.NewCertPool()
-	if ca, err := c.FileReader.ReadFile(os.Getenv(config.CaCertFile)); err == nil {
-		c.TlsConfig.RootCAs.AppendCertsFromPEM(ca)
-	} else {
-		log.WithField("error", err.Error()).Error("File not found")
+	caCertFilePath := os.Getenv(config.CaCertFile)
+	if strings.TrimSpace(caCertFilePath) != "" {
+		if ca, err := c.FileReader.ReadFile(caCertFilePath); err == nil {
+			c.TlsConfig.RootCAs = c.CertPoolMaker.NewCertPoolWithAppendedCa(ca)
+		} else {
+			log.WithField("error", err.Error()).Error("Error loading " + caCertFilePath)
+			return nil, err
+		}
 	}
+
 	if cert, err := c.KeyLoader.LoadKeyPair(os.Getenv(config.CertFile), os.Getenv(config.KeyFile)); err == nil {
 		c.TlsConfig.Certificates = append(c.TlsConfig.Certificates, cert)
 	} else {
-		log.WithField("error", err.Error()).Error("File not found")
+		log.WithField("error", err.Error())
 	}
 	return c.TlsDialer.DialTLS(connectionURL, c.TlsConfig)
 }
