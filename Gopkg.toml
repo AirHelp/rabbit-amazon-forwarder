@@ -27,7 +27,7 @@
 
 [[constraint]]
   name = "github.com/aws/aws-sdk-go"
-  version = "1.14.7"
+  version = "1.15.66"
 
 [[constraint]]
   name = "github.com/sirupsen/logrus"
