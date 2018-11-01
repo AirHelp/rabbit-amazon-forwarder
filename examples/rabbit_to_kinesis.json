@@ -1,0 +1,17 @@
+[
+  {
+    "source" : {
+      "type" : "RabbitMQ",
+      "name" : "test-rabbit",
+      "connection" : "amqp://guest:guest@localhost:5672/",
+      "topic" : "amq.topic",
+      "queue" : "test-queue",
+      "routing" : "#"
+    },
+    "destination" : {
+      "type" : "Kinesis",
+      "name" : "kinesis_data_stream",
+      "target" : "kinesis_data_stream"
+    }
+  }
+]

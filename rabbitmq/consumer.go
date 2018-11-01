@@ -3,8 +3,9 @@ package rabbitmq
 import (
 	"errors"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/AirHelp/rabbit-amazon-forwarder/config"
 	"github.com/AirHelp/rabbit-amazon-forwarder/consumer"
@@ -184,6 +185,7 @@ func (c Consumer) startForwarding(params *workerParams) error {
 		case <-params.stop:
 			log.WithField("forwarderName", forwarderName).Info("Closing")
 			closeRabbitMQ(params.conn, params.ch)
+			params.forwarder.Stop()
 			return errors.New(closedBySupervisorMessage)
 		}
 	}

@@ -9,4 +9,5 @@ const (
 type Client interface {
 	Name() string
 	Push(message string) error
+	Stop() error
 }

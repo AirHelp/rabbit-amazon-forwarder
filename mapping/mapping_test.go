@@ -143,11 +143,19 @@ func (c MockRabbitConsumer) Start(client forwarder.Client, check chan bool, stop
 	return nil
 }
 
+func (c MockRabbitConsumer) Stop() error {
+	return nil
+}
+
 func (f MockSNSForwarder) Name() string {
 	return f.name
 }
 
 func (f MockSNSForwarder) Push(message string) error {
+	return nil
+}
+
+func (f MockSNSForwarder) Stop() error {
 	return nil
 }
 
@@ -159,11 +167,19 @@ func (f MockLambdaForwarder) Push(message string) error {
 	return nil
 }
 
+func (f MockLambdaForwarder) Stop() error {
+	return nil
+}
+
 func (f MockLambdaForwarder) Name() string {
 	return f.name
 }
 
 func (f MockSQSForwarder) Push(message string) error {
+	return nil
+}
+
+func (f MockSQSForwarder) Stop() error {
 	return nil
 }
 
@@ -173,4 +189,8 @@ func (f ErrorForwarder) Name() string {
 
 func (f ErrorForwarder) Push(message string) error {
 	return errors.New("Wrong forwader created")
+}
+
+func (f ErrorForwarder) Stop() error {
+	return nil
 }

@@ -2,6 +2,7 @@ package lambda
 
 import (
 	"errors"
+
 	"github.com/AirHelp/rabbit-amazon-forwarder/config"
 	"github.com/AirHelp/rabbit-amazon-forwarder/forwarder"
 	"github.com/aws/aws-sdk-go/aws"
@@ -66,5 +67,11 @@ func (f Forwarder) Push(message string) error {
 	log.WithFields(log.Fields{
 		"forwarderName": f.Name(),
 		"statusCode":    resp.StatusCode}).Info("Forward succeeded")
+	return nil
+}
+
+// Stop stops the forwarder in theory, but for this Lambda implementation this is a no-op
+func (f Forwarder) Stop() error {
+	//for Lambda this is no-op
 	return nil
 }

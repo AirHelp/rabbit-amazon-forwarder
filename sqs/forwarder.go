@@ -2,6 +2,7 @@ package sqs
 
 import (
 	"errors"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/AirHelp/rabbit-amazon-forwarder/config"
@@ -63,5 +64,11 @@ func (f Forwarder) Push(message string) error {
 	log.WithFields(log.Fields{
 		"forwarderName": f.Name(),
 		"responseID":    resp.MessageId}).Info("Forward succeeded")
+	return nil
+}
+
+// Stop stops the forwarder in theory, but for this SQS implementation this is a no-op
+func (f Forwarder) Stop() error {
+	//for SQS this is no-op
 	return nil
 }

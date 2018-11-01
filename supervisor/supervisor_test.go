@@ -145,6 +145,10 @@ func (f MockSNSForwarder) Push(message string) error {
 	return nil
 }
 
+func (f MockSNSForwarder) Stop() error {
+	return nil
+}
+
 func (f MockSQSForwarder) Name() string {
 	return f.name
 }
@@ -153,10 +157,18 @@ func (f MockSQSForwarder) Push(message string) error {
 	return nil
 }
 
+func (f MockSQSForwarder) Stop() error {
+	return nil
+}
+
 func (f MockLambdaForwarder) Name() string {
 	return f.name
 }
 
 func (f MockLambdaForwarder) Push(message string) error {
+	return nil
+}
+
+func (f MockLambdaForwarder) Stop() error {
 	return nil
 }

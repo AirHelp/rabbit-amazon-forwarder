@@ -2,13 +2,15 @@ package mapping
 
 import (
 	"encoding/json"
-	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/AirHelp/rabbit-amazon-forwarder/config"
 	"github.com/AirHelp/rabbit-amazon-forwarder/consumer"
 	"github.com/AirHelp/rabbit-amazon-forwarder/forwarder"
+	"github.com/AirHelp/rabbit-amazon-forwarder/kinesis"
 	"github.com/AirHelp/rabbit-amazon-forwarder/lambda"
 	"github.com/AirHelp/rabbit-amazon-forwarder/rabbitmq"
 	"github.com/AirHelp/rabbit-amazon-forwarder/sns"
@@ -93,6 +95,8 @@ func (h helperImpl) createForwarder(entry config.AmazonEntry) forwarder.Client {
 		return sqs.CreateForwarder(entry)
 	case lambda.Type:
 		return lambda.CreateForwarder(entry)
+	case kinesis.Type:
+		return kinesis.CreateForwarder(entry)
 	}
 	return nil
 }
