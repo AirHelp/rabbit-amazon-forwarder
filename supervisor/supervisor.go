@@ -3,10 +3,11 @@ package supervisor
 import (
 	"encoding/json"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/AirHelp/rabbit-amazon-forwarder/consumer"
 	"github.com/AirHelp/rabbit-amazon-forwarder/forwarder"
@@ -94,6 +95,12 @@ func (c *Client) Restart(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, "")
 		return
 	}
+	successResponse(w)
+}
+
+// Stop stops the
+func (c *Client) Stop(w http.ResponseWriter, r *http.Request) {
+	c.stop()
 	successResponse(w)
 }
 

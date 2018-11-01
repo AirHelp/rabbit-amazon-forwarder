@@ -1,11 +1,12 @@
 package main
 
 import (
+	"net/http"
+	"os"
+
 	"github.com/AirHelp/rabbit-amazon-forwarder/mapping"
 	"github.com/AirHelp/rabbit-amazon-forwarder/supervisor"
 	log "github.com/sirupsen/logrus"
-	"net/http"
-	"os"
 )
 
 const (
@@ -25,6 +26,8 @@ func main() {
 	}
 	http.HandleFunc("/restart", supervisor.Restart)
 	http.HandleFunc("/health", supervisor.Check)
+	http.HandleFunc("/stop", supervisor.Stop)
+
 	log.Info("Starting http server")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
