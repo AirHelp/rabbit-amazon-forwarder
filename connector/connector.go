@@ -134,7 +134,7 @@ func CreateTlsRabbitConnector() *TlsRabbitConnector {
 }
 
 func CreateConnector(connectionURL string) RabbitConnector {
-	if strings.Contains(connectionURL, "amqps") {
+	if strings.HasPrefix(connectionURL, "amqps") {
 		return CreateTlsRabbitConnector()
 	} else {
 		return CreateBasicRabbitConnector()

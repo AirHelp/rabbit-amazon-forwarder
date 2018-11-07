@@ -23,6 +23,13 @@ var _ = Describe("Connector", func() {
 			})
 		})
 
+		Context("With an amqps value somewhere else in the connection url", func() {
+			It("should be a BasicRabbitConnector", func() {
+				actualConnect := connector.CreateConnector("amqp://guest:guest@rabbbit-amqps:5672")
+				Expect(actualConnect).Should(BeAssignableToTypeOf(&connector.BasicRabbitConnector{}))
+			})
+		})
+
 		Context("With a tls rabbit configuration", func() {
 			It("should be a TlsRabbitConnector", func() {
 				actualConnect := connector.CreateConnector("amqps")
@@ -52,6 +59,18 @@ var _ = Describe("Connector", func() {
 
 				Expect(connection).Should(Equal(expectedConnection))
 				Expect(err).Should(BeNil())
+			})
+		})
+
+		Context("With an error creating the connection", func() {
+			It("Should return an error", func() {
+				dialer.Error = errors.New("Expected")
+				dialer.ReturnedConnection = nil
+
+				connection, err := rabbitConnector.CreateConnection("any amqp url")
+
+				Expect(connection).Should(BeNil())
+				Expect(err).Should(Equal(dialer.Error))
 			})
 		})
 	})
