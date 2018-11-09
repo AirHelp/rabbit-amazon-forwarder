@@ -26,11 +26,12 @@ const maxQUEUELENGTH = 500
 
 // Forwarder forwarding client
 type Forwarder struct {
-	name            string
-	kinesisClient   kinesisiface.KinesisAPI
-	streamName      string
-	outputQ         *[]*kinesis.PutRecordsRequestEntry
-	lastSuccessTime *int64
+	name                     string
+	kinesisClient            kinesisiface.KinesisAPI
+	streamName               string
+	outputQ                  *[]*kinesis.PutRecordsRequestEntry
+	lastSuccessTime          *int64
+	maxQueueBufferTimeMillis uint16
 }
 
 // CreateForwarder creates instance of forwarder
@@ -44,7 +45,12 @@ func CreateForwarder(entry config.AmazonEntry, kinesisClient ...kinesisiface.Kin
 
 	outputQ := make([]*kinesis.PutRecordsRequestEntry, 0)
 	currentUnixTime := time.Now().UnixNano()
-	forwarder := Forwarder{entry.Name, client, entry.Target, &outputQ, &currentUnixTime}
+	maxQueueBufferTimeMillis := entry.KinesisParameters.MaxQueueBufferTimeMillis
+	if maxQueueBufferTimeMillis == 0 {
+		maxQueueBufferTimeMillis = 1000
+	}
+
+	forwarder := Forwarder{entry.Name, client, entry.Target, &outputQ, &currentUnixTime, maxQueueBufferTimeMillis}
 	log.WithFields(log.Fields{"forwarderName": forwarder.Name(), "forwarderType": Type}).Info("Created forwarder")
 
 	return forwarder
@@ -117,7 +123,7 @@ func (f Forwarder) Push(message string) error {
 
 	currentUnixTime := time.Now().UnixNano()
 
-	if (currentUnixTime-*f.lastSuccessTime >= int64(time.Second)) || // Don't queue for more than 1 second
+	if (currentUnixTime-*f.lastSuccessTime >= int64(f.maxQueueBufferTimeMillis)*int64(time.Millisecond)) || // Don't queue for more than maxQueueBufferTimeMillis
 		(len(*f.outputQ) >= maxQUEUELENGTH) { //See notes for Kinesis PutRecords
 		f.flushQueuedMessages()
 	}

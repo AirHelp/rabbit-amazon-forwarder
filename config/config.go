@@ -15,9 +15,15 @@ type RabbitEntry struct {
 	RoutingKey    string `json:"routing"`
 }
 
+// KinesisParameters Kinesis forwarder specific parameters
+type KinesisParameters struct {
+	MaxQueueBufferTimeMillis uint16 `json:"maxqueuebuffertimemillis"`
+}
+
 // AmazonEntry SQS/SNS mapping entry
 type AmazonEntry struct {
-	Type   string `json:"type"`
-	Name   string `json:"name"`
-	Target string `json:"target"`
+	Type              string            `json:"type"`
+	Name              string            `json:"name"`
+	Target            string            `json:"target"`
+	KinesisParameters KinesisParameters `json:"kinesisparameters"`
 }

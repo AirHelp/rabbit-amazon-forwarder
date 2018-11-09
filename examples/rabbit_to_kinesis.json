@@ -11,7 +11,10 @@
     "destination" : {
       "type" : "Kinesis",
       "name" : "kinesis_data_stream",
-      "target" : "kinesis_data_stream"
+      "target" : "kinesis_data_stream",
+      "kinesisparameters" : {
+        "maxqueuebuffertimemillis" : 1000
+      }
     }
   }
 ]
