@@ -21,6 +21,9 @@ const (
 	Type = "Kinesis"
 )
 
+// see https://docs.aws.amazon.com/kinesis/latest/APIReference/API_PutRecords.html
+const maxQUEUELENGTH = 500
+
 // Forwarder forwarding client
 type Forwarder struct {
 	name            string
@@ -32,7 +35,6 @@ type Forwarder struct {
 
 // CreateForwarder creates instance of forwarder
 func CreateForwarder(entry config.AmazonEntry, kinesisClient ...kinesisiface.KinesisAPI) forwarder.Client {
-	log.Info("Test")
 	var client kinesisiface.KinesisAPI
 	if len(kinesisClient) > 0 {
 		client = kinesisClient[0]
@@ -65,7 +67,28 @@ func (f Forwarder) flushQueuedMessages() error {
 
 		resp, err := f.kinesisClient.PutRecords(inputRecords)
 
+		//Create a slice to put failed messages in
+		FailureQ := make([]*kinesis.PutRecordsRequestEntry, 0)
+		if *resp.FailedRecordCount > 0 {
+			recordCount := 0
+			log.WithFields(log.Fields{
+				"FailedRecordCount": *resp.FailedRecordCount}).Error("Error putting records")
+			for _, item := range resp.Records {
+				if item.ErrorCode != nil {
+					FailureQ = append(FailureQ, (*f.outputQ)[recordCount])
+				}
+				recordCount++
+			}
+		}
+
+		//Reset the output queue
 		*f.outputQ = (*f.outputQ)[:0]
+
+		//re-queue failed messages
+		for _, failedItem := range FailureQ {
+			*f.outputQ = append(*f.outputQ, failedItem)
+		}
+
 		*f.lastSuccessTime = time.Now().UnixNano()
 
 		if err != nil {
@@ -75,11 +98,6 @@ func (f Forwarder) flushQueuedMessages() error {
 			return err
 		}
 
-		for _, item := range resp.Records {
-			log.WithFields(log.Fields{
-				"forwarderName":  f.Name(),
-				"SequenceNumber": item.SequenceNumber}).Debug("Forward succeeded")
-		}
 	}
 
 	return nil
@@ -99,8 +117,8 @@ func (f Forwarder) Push(message string) error {
 
 	currentUnixTime := time.Now().UnixNano()
 
-	if (currentUnixTime-*f.lastSuccessTime >= 1000*1000*1000) ||
-		(len(*f.outputQ) >= 500) { //maximize for 1 second bursts or 500 items
+	if (currentUnixTime-*f.lastSuccessTime >= int64(time.Second)) || // Don't queue for more than 1 second
+		(len(*f.outputQ) >= maxQUEUELENGTH) { //See notes for Kinesis PutRecords
 		f.flushQueuedMessages()
 	}
 
@@ -109,7 +127,7 @@ func (f Forwarder) Push(message string) error {
 
 // Stop stops the forwarder in this case it attempts a flush
 func (f Forwarder) Stop() error {
-	log.Info("Stopping")
+	log.WithFields(log.Fields{"ForwarderName": f.Name()}).Info("Stopping Forwarder")
 	f.flushQueuedMessages()
 	return nil
 }

@@ -98,7 +98,7 @@ func (c *Client) Restart(w http.ResponseWriter, r *http.Request) {
 	successResponse(w)
 }
 
-// Stop stops the
+// Stop stops all the consumer-producer/forwarder pairs
 func (c *Client) Stop(w http.ResponseWriter, r *http.Request) {
 	c.stop()
 	successResponse(w)
