@@ -45,7 +45,7 @@ func CreateForwarder(entry config.AmazonEntry, kinesisClient ...kinesisiface.Kin
 	outputQ := make([]*kinesis.PutRecordsRequestEntry, 0)
 	currentUnixTime := time.Now().UnixNano()
 	forwarder := Forwarder{entry.Name, client, entry.Target, &outputQ, &currentUnixTime}
-	log.WithField("forwarderName", forwarder.Name()).Info("Created forwarder")
+	log.WithFields(log.Fields{"forwarderName": forwarder.Name(), "forwarderType": Type}).Info("Created forwarder")
 
 	return forwarder
 }
