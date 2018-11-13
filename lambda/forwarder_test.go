@@ -1,6 +1,7 @@
 package lambda
 
 import (
+	"encoding/json"
 	"errors"
 	"testing"
 
@@ -18,9 +19,14 @@ const (
 )
 
 func TestCreateForwarder(t *testing.T) {
-	entry := config.AmazonEntry{Type: "Lambda",
+	rawConfig, _ := json.Marshal(Config{
+		Function: "lambda-test",
+	})
+
+	entry := config.Entry{
+		Type:   "Lambda",
 		Name:   "lambda-test",
-		Target: "function1-test",
+		Config: (*json.RawMessage)(&rawConfig),
 	}
 	forwarder := CreateForwarder(entry)
 	if forwarder.Name() != entry.Name {
@@ -30,9 +36,14 @@ func TestCreateForwarder(t *testing.T) {
 
 func TestPush(t *testing.T) {
 	functionName := "function1-test"
-	entry := config.AmazonEntry{Type: "Lambda",
+
+	rawConfig, _ := json.Marshal(Config{
+		Function: functionName,
+	})
+
+	entry := config.Entry{Type: "Lambda",
 		Name:   "lambda-test",
-		Target: functionName,
+		Config: (*json.RawMessage)(&rawConfig),
 	}
 	scenarios := []struct {
 		name     string

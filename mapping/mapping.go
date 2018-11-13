@@ -2,9 +2,12 @@ package mapping
 
 import (
 	"encoding/json"
-	log "github.com/sirupsen/logrus"
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/AirHelp/rabbit-amazon-forwarder/config"
 	"github.com/AirHelp/rabbit-amazon-forwarder/consumer"
@@ -18,8 +21,8 @@ import (
 type pairs []pair
 
 type pair struct {
-	Source      config.RabbitEntry `json:"source"`
-	Destination config.AmazonEntry `json:"destination"`
+	Source      *config.Entry `json:"source"`
+	Destination *config.Entry `json:"destination"`
 }
 
 // Client mapping client
@@ -29,8 +32,8 @@ type Client struct {
 
 // Helper interface for creating consumers and forwaders
 type Helper interface {
-	createConsumer(entry config.RabbitEntry) consumer.Client
-	createForwarder(entry config.AmazonEntry) forwarder.Client
+	createConsumer(entry config.Entry) consumer.Client
+	createForwarder(entry config.Entry) forwarder.Client
 }
 
 type helperImpl struct{}
@@ -56,10 +59,27 @@ func (c Client) Load() (map[consumer.Client]forwarder.Client, error) {
 	if err = json.Unmarshal(data, &pairsList); err != nil {
 		return consumerForwarderMap, err
 	}
+
 	log.Info("Loading consumer - forwarder pairs")
 	for _, pair := range pairsList {
-		consumer := c.helper.createConsumer(pair.Source)
-		forwarder := c.helper.createForwarder(pair.Destination)
+
+		if pair.Source == nil {
+			return nil, errors.New("Source must be provided in a config pair")
+		}
+		if pair.Destination == nil {
+			return nil, errors.New("Destination must be provided in a config pair")
+		}
+
+		consumer := c.helper.createConsumer(*pair.Source)
+		if consumer == nil {
+			return nil, fmt.Errorf("Failed to create forwarder %s type %s ", pair.Source.Name, pair.Source.Type)
+		}
+
+		forwarder := c.helper.createForwarder(*pair.Destination)
+		if forwarder == nil {
+			return nil, fmt.Errorf("Failed to create forwarder %s type %s ", pair.Destination.Name, pair.Destination.Type)
+		}
+
 		consumerForwarderMap[consumer] = forwarder
 	}
 	return consumerForwarderMap, nil
@@ -71,7 +91,7 @@ func (c Client) loadFile() ([]byte, error) {
 	return ioutil.ReadFile(filePath)
 }
 
-func (h helperImpl) createConsumer(entry config.RabbitEntry) consumer.Client {
+func (h helperImpl) createConsumer(entry config.Entry) consumer.Client {
 	log.WithFields(log.Fields{
 		"consumerType": entry.Type,
 		"consumerName": entry.Name}).Info("Creating consumer")
@@ -82,7 +102,7 @@ func (h helperImpl) createConsumer(entry config.RabbitEntry) consumer.Client {
 	return nil
 }
 
-func (h helperImpl) createForwarder(entry config.AmazonEntry) forwarder.Client {
+func (h helperImpl) createForwarder(entry config.Entry) forwarder.Client {
 	log.WithFields(log.Fields{
 		"forwarderType": entry.Type,
 		"forwarderName": entry.Name}).Info("Creating forwarder")

@@ -1,7 +1,9 @@
 package sns
 
 import (
+	"encoding/json"
 	"errors"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/AirHelp/rabbit-amazon-forwarder/config"
@@ -17,22 +19,38 @@ const (
 	Type = "SNS"
 )
 
+// Config a struct representing the json config
+type Config struct {
+	Topic string `json:"topic"`
+}
+
 // Forwarder forwarding client
 type Forwarder struct {
 	name      string
 	snsClient snsiface.SNSAPI
-	topic     string
+	config    Config
 }
 
 // CreateForwarder creates instance of forwarder
-func CreateForwarder(entry config.AmazonEntry, snsClient ...snsiface.SNSAPI) forwarder.Client {
+func CreateForwarder(entry config.Entry, snsClient ...snsiface.SNSAPI) forwarder.Client {
+	//Unmarshal Config
+	if entry.Config == nil {
+		//we need a config
+		return nil
+	}
+
+	var config Config
+	if err := json.Unmarshal(*entry.Config, &config); err != nil {
+		return nil
+	}
+
 	var client snsiface.SNSAPI
 	if len(snsClient) > 0 {
 		client = snsClient[0]
 	} else {
 		client = sns.New(session.Must(session.NewSession()))
 	}
-	forwarder := Forwarder{entry.Name, client, entry.Target}
+	forwarder := Forwarder{entry.Name, client, config}
 	log.WithField("forwarderName", forwarder.Name()).Info("Created forwarder")
 	return forwarder
 }
@@ -49,7 +67,7 @@ func (f Forwarder) Push(message string) error {
 	}
 	params := &sns.PublishInput{
 		Message:   aws.String(message),
-		TargetArn: aws.String(f.topic),
+		TargetArn: aws.String(f.config.Topic),
 	}
 
 	resp, err := f.snsClient.Publish(params)

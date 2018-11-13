@@ -1,6 +1,7 @@
 package sqs
 
 import (
+	"encoding/json"
 	"errors"
 	"testing"
 
@@ -14,10 +15,16 @@ import (
 var badRequest = "Bad request"
 
 func TestCreateForwarder(t *testing.T) {
-	entry := config.AmazonEntry{Type: "SQS",
+	rawConfig, _ := json.Marshal(Config{
+		Queue: "arn",
+	})
+
+	entry := config.Entry{
+		Type:   "SQS",
 		Name:   "sqs-test",
-		Target: "arn",
+		Config: (*json.RawMessage)(&rawConfig),
 	}
+
 	forwarder := CreateForwarder(entry)
 	if forwarder.Name() != entry.Name {
 		t.Errorf("wrong forwarder name, expected:%s, found: %s", entry.Name, forwarder.Name())
@@ -26,10 +33,17 @@ func TestCreateForwarder(t *testing.T) {
 
 func TestPush(t *testing.T) {
 	queueName := "queue1"
-	entry := config.AmazonEntry{Type: "SQS",
+
+	rawConfig, _ := json.Marshal(Config{
+		Queue: queueName,
+	})
+
+	entry := config.Entry{
+		Type:   "SQS",
 		Name:   "sqs-test",
-		Target: queueName,
+		Config: (*json.RawMessage)(&rawConfig),
 	}
+
 	scenarios := []struct {
 		name    string
 		mock    sqsiface.SQSAPI

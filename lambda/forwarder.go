@@ -1,7 +1,9 @@
 package lambda
 
 import (
+	"encoding/json"
 	"errors"
+
 	"github.com/AirHelp/rabbit-amazon-forwarder/config"
 	"github.com/AirHelp/rabbit-amazon-forwarder/forwarder"
 	"github.com/aws/aws-sdk-go/aws"
@@ -16,22 +18,38 @@ const (
 	Type = "Lambda"
 )
 
+// Config a struct representing the json config
+type Config struct {
+	Function string `json:"function"`
+}
+
 // Forwarder forwarding client
 type Forwarder struct {
-	name         string
 	lambdaClient lambdaiface.LambdaAPI
-	function     string
+	name         string
+	config       Config
 }
 
 // CreateForwarder creates instance of forwarder
-func CreateForwarder(entry config.AmazonEntry, lambdaClient ...lambdaiface.LambdaAPI) forwarder.Client {
+func CreateForwarder(entry config.Entry, lambdaClient ...lambdaiface.LambdaAPI) forwarder.Client {
+	//Unmarshal Config
+	if entry.Config == nil {
+		//we need a config
+		return nil
+	}
+
+	var config Config
+	if err := json.Unmarshal(*entry.Config, &config); err != nil {
+		return nil
+	}
+
 	var client lambdaiface.LambdaAPI
 	if len(lambdaClient) > 0 {
 		client = lambdaClient[0]
 	} else {
 		client = lambda.New(session.Must(session.NewSession()))
 	}
-	forwarder := Forwarder{entry.Name, client, entry.Target}
+	forwarder := Forwarder{client, entry.Name, config}
 	log.WithField("forwarderName", forwarder.Name()).Info("Created forwarder")
 	return forwarder
 }
@@ -47,7 +65,7 @@ func (f Forwarder) Push(message string) error {
 		return errors.New(forwarder.EmptyMessageError)
 	}
 	params := &lambda.InvokeInput{
-		FunctionName: aws.String(f.function),
+		FunctionName: aws.String(f.config.Function),
 		Payload:      []byte(message),
 	}
 	resp, err := f.lambdaClient.Invoke(params)

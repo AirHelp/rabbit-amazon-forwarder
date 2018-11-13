@@ -1,7 +1,9 @@
 package sqs
 
 import (
+	"encoding/json"
 	"errors"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/AirHelp/rabbit-amazon-forwarder/config"
@@ -17,22 +19,38 @@ const (
 	Type = "SQS"
 )
 
+// Config i
+type Config struct {
+	Queue string `json:"queue"`
+}
+
 // Forwarder forwarding client
 type Forwarder struct {
 	name      string
 	sqsClient sqsiface.SQSAPI
-	queue     string
+	config    Config
 }
 
 // CreateForwarder creates instance of forwarder
-func CreateForwarder(entry config.AmazonEntry, sqsClient ...sqsiface.SQSAPI) forwarder.Client {
+func CreateForwarder(entry config.Entry, sqsClient ...sqsiface.SQSAPI) forwarder.Client {
+	//Unmarshal Config
+	if entry.Config == nil {
+		//we need a config
+		return nil
+	}
+
+	var config Config
+	if err := json.Unmarshal(*entry.Config, &config); err != nil {
+		return nil
+	}
+
 	var client sqsiface.SQSAPI
 	if len(sqsClient) > 0 {
 		client = sqsClient[0]
 	} else {
 		client = sqs.New(session.Must(session.NewSession()))
 	}
-	forwarder := Forwarder{entry.Name, client, entry.Target}
+	forwarder := Forwarder{entry.Name, client, config}
 	log.WithField("forwarderName", forwarder.Name()).Info("Created forwarder")
 	return forwarder
 }
@@ -48,8 +66,8 @@ func (f Forwarder) Push(message string) error {
 		return errors.New(forwarder.EmptyMessageError)
 	}
 	params := &sqs.SendMessageInput{
-		MessageBody: aws.String(message), // Required
-		QueueUrl:    aws.String(f.queue), // Required
+		MessageBody: aws.String(message),        // Required
+		QueueUrl:    aws.String(f.config.Queue), // Required
 	}
 
 	resp, err := f.sqsClient.SendMessage(params)

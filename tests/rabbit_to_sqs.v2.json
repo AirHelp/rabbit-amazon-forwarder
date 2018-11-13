@@ -1,0 +1,23 @@
+[
+  {
+    "source" : {
+      "configversion" : 2,
+      "type" : "RabbitMQ",
+      "name" : "test-rabbit",
+      "config" : {
+        "connection" : "amqp://guest:guest@localhost:5672/",
+        "topic" : "amq.topic",
+        "queue" : "test-queue",
+        "routing" : "#"
+      }
+    },
+    "destination" : {
+      "configversion" : 2,
+      "type" : "SQS",
+      "name" : "test-queue",
+      "config" : {
+        "target" : "https://sqs.eu-west-1.amazonaws.com/XXXXXXXXX/test-queue"
+      }
+    }
+  }
+]

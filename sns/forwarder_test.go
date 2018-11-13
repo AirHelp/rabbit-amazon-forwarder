@@ -1,6 +1,7 @@
 package sns
 
 import (
+	"encoding/json"
 	"errors"
 	"testing"
 
@@ -14,9 +15,14 @@ import (
 var badRequest = "Bad request"
 
 func TestCreateForwarder(t *testing.T) {
-	entry := config.AmazonEntry{Type: "SNS",
+	rawConfig, _ := json.Marshal(Config{
+		Topic: "topic1",
+	})
+
+	entry := config.Entry{
+		Type:   "SNS",
 		Name:   "sns-test",
-		Target: "arn",
+		Config: (*json.RawMessage)(&rawConfig),
 	}
 	forwarder := CreateForwarder(entry)
 	if forwarder.Name() != entry.Name {
@@ -26,10 +32,17 @@ func TestCreateForwarder(t *testing.T) {
 
 func TestPush(t *testing.T) {
 	topicName := "topic1"
-	entry := config.AmazonEntry{Type: "SNS",
+
+	rawConfig, _ := json.Marshal(Config{
+		Topic: topicName,
+	})
+
+	entry := config.Entry{
+		Type:   "SNS",
 		Name:   "sns-test",
-		Target: topicName,
+		Config: (*json.RawMessage)(&rawConfig),
 	}
+
 	scenarios := []struct {
 		name    string
 		mock    snsiface.SNSAPI

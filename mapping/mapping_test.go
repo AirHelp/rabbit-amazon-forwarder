@@ -1,6 +1,7 @@
 package mapping
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"testing"
@@ -47,12 +48,19 @@ func TestLoadFile(t *testing.T) {
 func TestCreateConsumer(t *testing.T) {
 	client := New()
 	consumerName := "test-rabbit"
-	entry := config.RabbitEntry{Type: "RabbitMQ",
-		Name:          consumerName,
+
+	rawConfig, _ := json.Marshal(rabbitmq.Config{
 		ConnectionURL: "url",
 		ExchangeName:  "topic",
 		QueueName:     "test-queue",
-		RoutingKey:    "#"}
+		RoutingKey:    "#",
+	})
+
+	entry := config.Entry{
+		Type:   "RabbitMQ",
+		Name:   consumerName,
+		Config: (*json.RawMessage)(&rawConfig),
+	}
 	consumer := client.helper.createConsumer(entry)
 	if consumer.Name() != consumerName {
 		t.Errorf("wrong consumer name, expected %s, found %s", consumerName, consumer.Name())
@@ -62,10 +70,17 @@ func TestCreateConsumer(t *testing.T) {
 func TestCreateForwarderSNS(t *testing.T) {
 	client := New(MockMappingHelper{})
 	forwarderName := "test-sns"
-	entry := config.AmazonEntry{Type: "SNS",
+
+	rawConfig, _ := json.Marshal(sns.Config{
+		Topic: "topic1",
+	})
+
+	entry := config.Entry{
+		Type:   "SNS",
 		Name:   forwarderName,
-		Target: "arn",
+		Config: (*json.RawMessage)(&rawConfig),
 	}
+
 	forwarder := client.helper.createForwarder(entry)
 	if forwarder.Name() != forwarderName {
 		t.Errorf("wrong forwarder name, expected %s, found %s", forwarderName, forwarder.Name())
@@ -75,9 +90,14 @@ func TestCreateForwarderSNS(t *testing.T) {
 func TestCreateForwarderSQS(t *testing.T) {
 	client := New(MockMappingHelper{})
 	forwarderName := "test-sqs"
-	entry := config.AmazonEntry{Type: "SQS",
+	rawConfig, _ := json.Marshal(sqs.Config{
+		Queue: "arn",
+	})
+
+	entry := config.Entry{
+		Type:   "SQS",
 		Name:   forwarderName,
-		Target: "arn",
+		Config: (*json.RawMessage)(&rawConfig),
 	}
 	forwarder := client.helper.createForwarder(entry)
 	if forwarder.Name() != forwarderName {
@@ -88,9 +108,15 @@ func TestCreateForwarderSQS(t *testing.T) {
 func TestCreateForwarderLambda(t *testing.T) {
 	client := New(MockMappingHelper{})
 	forwarderName := "test-lambda"
-	entry := config.AmazonEntry{Type: "Lambda",
+
+	rawConfig, _ := json.Marshal(lambda.Config{
+		Function: "function-name",
+	})
+
+	entry := config.Entry{
+		Type:   "Lambda",
 		Name:   forwarderName,
-		Target: "function-name",
+		Config: (*json.RawMessage)(&rawConfig),
 	}
 	forwarder := client.helper.createForwarder(entry)
 	if forwarder.Name() != forwarderName {
@@ -117,13 +143,13 @@ type MockLambdaForwarder struct {
 
 type ErrorForwarder struct{}
 
-func (h MockMappingHelper) createConsumer(entry config.RabbitEntry) consumer.Client {
+func (h MockMappingHelper) createConsumer(entry config.Entry) consumer.Client {
 	if entry.Type != rabbitmq.Type {
 		return nil
 	}
 	return MockRabbitConsumer{}
 }
-func (h MockMappingHelper) createForwarder(entry config.AmazonEntry) forwarder.Client {
+func (h MockMappingHelper) createForwarder(entry config.Entry) forwarder.Client {
 	switch entry.Type {
 	case sns.Type:
 		return MockSNSForwarder{entry.Name}

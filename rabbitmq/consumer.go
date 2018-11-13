@@ -1,10 +1,12 @@
 package rabbitmq
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/AirHelp/rabbit-amazon-forwarder/config"
 	"github.com/AirHelp/rabbit-amazon-forwarder/consumer"
@@ -21,13 +23,18 @@ const (
 	ReconnectRabbitMQInterval = 10
 )
 
+// Config RabbitMQ config entry
+type Config struct {
+	ConnectionURL string `json:"connection"`
+	ExchangeName  string `json:"topic"`
+	QueueName     string `json:"queue"`
+	RoutingKey    string `json:"routing"`
+}
+
 // Consumer implementation or RabbitMQ consumer
 type Consumer struct {
-	name          string
-	ConnectionURL string
-	ExchangeName  string
-	QueueName     string
-	RoutingKey    string
+	name   string
+	config Config
 }
 
 // parameters for starting consumer
@@ -41,8 +48,18 @@ type workerParams struct {
 }
 
 // CreateConsumer creates consumer from string map
-func CreateConsumer(entry config.RabbitEntry) consumer.Client {
-	return Consumer{entry.Name, entry.ConnectionURL, entry.ExchangeName, entry.QueueName, entry.RoutingKey}
+func CreateConsumer(entry config.Entry) consumer.Client {
+	if entry.Config == nil {
+		//we need a config
+		return nil
+	}
+
+	var config Config
+	if err := json.Unmarshal(*entry.Config, &config); err != nil {
+		return nil
+	}
+
+	return Consumer{entry.Name, config}
 }
 
 // Name consumer name
@@ -53,8 +70,8 @@ func (c Consumer) Name() string {
 // Start start consuming messages from Rabbit queue
 func (c Consumer) Start(forwarder forwarder.Client, check chan bool, stop chan bool) error {
 	log.WithFields(log.Fields{
-		"exchangeName": c.ExchangeName,
-		"queueName":    c.QueueName}).Info("Starting connecting consumer")
+		"exchangeName": c.config.ExchangeName,
+		"queueName":    c.config.QueueName}).Info("Starting connecting consumer")
 	for {
 		delivery, conn, ch, err := c.initRabbitMQ()
 		if err != nil {
@@ -95,7 +112,7 @@ func (c Consumer) initRabbitMQ() (<-chan amqp.Delivery, *amqp.Connection, *amqp.
 }
 
 func (c Consumer) connect() (<-chan amqp.Delivery, *amqp.Connection, *amqp.Channel, error) {
-	conn, err := amqp.Dial(c.ConnectionURL)
+	conn, err := amqp.Dial(c.config.ConnectionURL)
 	if err != nil {
 		return failOnError(err, "Failed to connect to RabbitMQ")
 	}
@@ -108,11 +125,11 @@ func (c Consumer) connect() (<-chan amqp.Delivery, *amqp.Connection, *amqp.Chann
 
 func (c Consumer) setupExchangesAndQueues(conn *amqp.Connection, ch *amqp.Channel) (<-chan amqp.Delivery, *amqp.Connection, *amqp.Channel, error) {
 	var err error
-	deadLetterExchangeName := c.QueueName + "-dead-letter"
-	deadLetterQueueName := c.QueueName + "-dead-letter"
+	deadLetterExchangeName := c.config.QueueName + "-dead-letter"
+	deadLetterQueueName := c.config.QueueName + "-dead-letter"
 	// regular exchange
-	if err = ch.ExchangeDeclare(c.ExchangeName, "topic", true, false, false, false, nil); err != nil {
-		return failOnError(err, "Failed to declare an exchange:"+c.ExchangeName)
+	if err = ch.ExchangeDeclare(c.config.ExchangeName, "topic", true, false, false, false, nil); err != nil {
+		return failOnError(err, "Failed to declare an exchange:"+c.config.ExchangeName)
 	}
 	// dead-letter-exchange
 	if err = ch.ExchangeDeclare(deadLetterExchangeName, "fanout", true, false, false, false, nil); err != nil {
@@ -126,17 +143,17 @@ func (c Consumer) setupExchangesAndQueues(conn *amqp.Connection, ch *amqp.Channe
 		return failOnError(err, "Failed to bind a queue:"+deadLetterQueueName)
 	}
 	// regular queue
-	if _, err = ch.QueueDeclare(c.QueueName, true, false, false, false,
+	if _, err = ch.QueueDeclare(c.config.QueueName, true, false, false, false,
 		amqp.Table{
 			"x-dead-letter-exchange": deadLetterExchangeName,
 		}); err != nil {
-		return failOnError(err, "Failed to declare a queue:"+c.QueueName)
+		return failOnError(err, "Failed to declare a queue:"+c.config.QueueName)
 	}
-	if err = ch.QueueBind(c.QueueName, c.RoutingKey, c.ExchangeName, false, nil); err != nil {
-		return failOnError(err, "Failed to bind a queue:"+c.QueueName)
+	if err = ch.QueueBind(c.config.QueueName, c.config.RoutingKey, c.config.ExchangeName, false, nil); err != nil {
+		return failOnError(err, "Failed to bind a queue:"+c.config.QueueName)
 	}
 
-	msgs, err := ch.Consume(c.QueueName, c.Name(), false, false, false, false, nil)
+	msgs, err := ch.Consume(c.config.QueueName, c.Name(), false, false, false, false, nil)
 	if err != nil {
 		return failOnError(err, "Failed to register a consumer")
 	}
