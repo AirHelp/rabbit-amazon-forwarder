@@ -16,6 +16,7 @@
       "type" : "SQS",
       "name" : "test-queue",
       "config" : {
+        "configversion" : "v2",
         "target" : "https://sqs.eu-west-1.amazonaws.com/XXXXXXXXX/test-queue"
       }
     }

@@ -16,7 +16,8 @@ var badRequest = "Bad request"
 
 func TestCreateForwarder(t *testing.T) {
 	rawConfig, _ := json.Marshal(Config{
-		Queue: "arn",
+		Queue:         "arn",
+		Configversion: aws.String("v2"),
 	})
 
 	entry := config.Entry{
@@ -35,7 +36,8 @@ func TestPush(t *testing.T) {
 	queueName := "queue1"
 
 	rawConfig, _ := json.Marshal(Config{
-		Queue: queueName,
+		Queue:         queueName,
+		Configversion: aws.String("v2"),
 	})
 
 	entry := config.Entry{

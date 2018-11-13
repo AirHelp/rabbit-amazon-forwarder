@@ -25,6 +25,14 @@ type pair struct {
 	Destination *config.Entry `json:"destination"`
 }
 
+//Backward compatibility config
+type pairsV0 []pairV0
+
+type pairV0 struct {
+	Source      *json.RawMessage `json:"source"`
+	Destination *json.RawMessage `json:"destination"`
+}
+
 // Client mapping client
 type Client struct {
 	helper Helper
@@ -55,10 +63,19 @@ func (c Client) Load() (map[consumer.Client]forwarder.Client, error) {
 	if err != nil {
 		return consumerForwarderMap, err
 	}
+
 	var pairsList pairs
 	if err = json.Unmarshal(data, &pairsList); err != nil {
 		return consumerForwarderMap, err
 	}
+
+	//Unmarshall possible older structure
+	var pairsV0List pairsV0
+	if err = json.Unmarshal(data, &pairsV0List); err != nil {
+		return consumerForwarderMap, err
+	}
+
+	pairsListIndex := 0
 
 	log.Info("Loading consumer - forwarder pairs")
 	for _, pair := range pairsList {
@@ -70,9 +87,21 @@ func (c Client) Load() (map[consumer.Client]forwarder.Client, error) {
 			return nil, errors.New("Destination must be provided in a config pair")
 		}
 
+		//Config for source is missing?? Assume older config and push down to provider
+		if pair.Source.Config == nil {
+			log.Warn("Looks like you're using a V0 Config. Please consider moving to new config format")
+			pair.Source.Config = pairsV0List[pairsListIndex].Source
+		}
+
 		consumer := c.helper.createConsumer(*pair.Source)
 		if consumer == nil {
 			return nil, fmt.Errorf("Failed to create forwarder %s type %s ", pair.Source.Name, pair.Source.Type)
+		}
+
+		//Config for destination is missing?? Assume older config and push down to provider
+		if pair.Destination.Config == nil {
+			log.Warn("Looks like you're using a V0 Config. Please consider moving to new config format")
+			pair.Destination.Config = pairsV0List[pairsListIndex].Destination
 		}
 
 		forwarder := c.helper.createForwarder(*pair.Destination)
@@ -81,6 +110,7 @@ func (c Client) Load() (map[consumer.Client]forwarder.Client, error) {
 		}
 
 		consumerForwarderMap[consumer] = forwarder
+		pairsListIndex++
 	}
 	return consumerForwarderMap, nil
 }

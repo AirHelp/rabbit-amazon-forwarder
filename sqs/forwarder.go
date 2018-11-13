@@ -21,7 +21,8 @@ const (
 
 // Config i
 type Config struct {
-	Queue string `json:"queue"`
+	Queue         string  `json:"queue"`
+	Configversion *string `json:"configversion"`
 }
 
 // Forwarder forwarding client
@@ -42,6 +43,10 @@ func CreateForwarder(entry config.Entry, sqsClient ...sqsiface.SQSAPI) forwarder
 	var config Config
 	if err := json.Unmarshal(*entry.Config, &config); err != nil {
 		return nil
+	}
+
+	if config.Configversion == nil {
+		log.Warn("Looks like you're using an old config format version or have forgotten the configversion parameter. We will try and recover")
 	}
 
 	var client sqsiface.SQSAPI

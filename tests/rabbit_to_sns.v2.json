@@ -16,6 +16,7 @@
       "type" : "SNS",
       "name" : "test-sns",
       "config" : {
+        "configversion" : "v2",
         "target" : "arn:aws:sns:eu-west-1:XXXXXXXX:test-forwarder"
       }
     }

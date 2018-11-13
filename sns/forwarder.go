@@ -21,7 +21,8 @@ const (
 
 // Config a struct representing the json config
 type Config struct {
-	Topic string `json:"topic"`
+	Configversion *string `json:"configversion"`
+	Topic         string  `json:"topic"`
 }
 
 // Forwarder forwarding client
@@ -42,6 +43,10 @@ func CreateForwarder(entry config.Entry, snsClient ...snsiface.SNSAPI) forwarder
 	var config Config
 	if err := json.Unmarshal(*entry.Config, &config); err != nil {
 		return nil
+	}
+
+	if config.Configversion == nil {
+		log.Warn("Looks like you're using an old config format version or have forgotten the configversion parameter. We will try and recover")
 	}
 
 	var client snsiface.SNSAPI

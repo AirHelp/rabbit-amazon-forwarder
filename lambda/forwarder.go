@@ -18,16 +18,22 @@ const (
 	Type = "Lambda"
 )
 
-// Config a struct representing the json config
-type Config struct {
-	Function string `json:"function"`
+// ConfigV0 a struct representing the V0 json config
+type ConfigV0 struct {
+	Target string `json:"target"`
+}
+
+// ConfigV2 a struct representing the V2 json config
+type ConfigV2 struct {
+	Configversion *string `json:"configversion"`
+	Function      string  `json:"function"`
 }
 
 // Forwarder forwarding client
 type Forwarder struct {
 	lambdaClient lambdaiface.LambdaAPI
 	name         string
-	config       Config
+	config       ConfigV2
 }
 
 // CreateForwarder creates instance of forwarder
@@ -38,8 +44,24 @@ func CreateForwarder(entry config.Entry, lambdaClient ...lambdaiface.LambdaAPI) 
 		return nil
 	}
 
-	var config Config
+	var config ConfigV2
 	if err := json.Unmarshal(*entry.Config, &config); err != nil {
+		return nil
+	}
+
+	//Maintain backwards compatibility (assume V0 config)
+	if config.Configversion == nil {
+		log.Warn("Looks like you're using an old config format version or have forgotten the configversion parameter. We will try and recover")
+		var configv0 ConfigV0
+		if err := json.Unmarshal(*entry.Config, &configv0); err != nil {
+			return nil
+		}
+		config.Function = configv0.Target
+	}
+
+	if config.Function == "" {
+
+		log.Error("Function/Target not defined we will not start up")
 		return nil
 	}
 

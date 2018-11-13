@@ -20,8 +20,21 @@ const (
 	snsType    = "sns"
 )
 
-func TestLoad(t *testing.T) {
+func TestLoadV0(t *testing.T) {
 	os.Setenv(config.MappingFile, "../tests/rabbit_to_sns.json")
+	client := New(MockMappingHelper{})
+	var consumerForwarderMap map[consumer.Client]forwarder.Client
+	var err error
+	if consumerForwarderMap, err = client.Load(); err != nil {
+		t.Errorf("could not load mapping and start mocked rabbit->sns pair: %s", err.Error())
+	}
+	if len(consumerForwarderMap) != 1 {
+		t.Errorf("wrong consumerForwarderMap size, expected 1, got %d", len(consumerForwarderMap))
+	}
+}
+
+func TestLoadV2(t *testing.T) {
+	os.Setenv(config.MappingFile, "../tests/rabbit_to_sns.v2.json")
 	client := New(MockMappingHelper{})
 	var consumerForwarderMap map[consumer.Client]forwarder.Client
 	var err error
@@ -109,7 +122,7 @@ func TestCreateForwarderLambda(t *testing.T) {
 	client := New(MockMappingHelper{})
 	forwarderName := "test-lambda"
 
-	rawConfig, _ := json.Marshal(lambda.Config{
+	rawConfig, _ := json.Marshal(lambda.ConfigV2{
 		Function: "function-name",
 	})
 

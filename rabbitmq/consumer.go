@@ -25,10 +25,11 @@ const (
 
 // Config RabbitMQ config entry
 type Config struct {
-	ConnectionURL string `json:"connection"`
-	ExchangeName  string `json:"topic"`
-	QueueName     string `json:"queue"`
-	RoutingKey    string `json:"routing"`
+	Configversion *string `json:"configversion"`
+	ConnectionURL string  `json:"connection"`
+	ExchangeName  string  `json:"topic"`
+	QueueName     string  `json:"queue"`
+	RoutingKey    string  `json:"routing"`
 }
 
 // Consumer implementation or RabbitMQ consumer
@@ -57,6 +58,10 @@ func CreateConsumer(entry config.Entry) consumer.Client {
 	var config Config
 	if err := json.Unmarshal(*entry.Config, &config); err != nil {
 		return nil
+	}
+
+	if config.Configversion == nil {
+		log.Warn("Looks like you're using an old config format version or have forgotten the configversion parameter. We will try and recover")
 	}
 
 	return Consumer{entry.Name, config}

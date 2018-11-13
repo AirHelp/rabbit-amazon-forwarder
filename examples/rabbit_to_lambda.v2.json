@@ -14,6 +14,7 @@
       "type" : "Lambda",
       "name" : "test-lambda",
       "config" : {
+        "configversion" : "v2",
         "function" : "test-forwarder-lambda"
       }
     }

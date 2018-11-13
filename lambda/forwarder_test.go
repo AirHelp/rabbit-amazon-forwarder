@@ -18,9 +18,10 @@ const (
 	unhandledError = "Unhandled"
 )
 
-func TestCreateForwarder(t *testing.T) {
-	rawConfig, _ := json.Marshal(Config{
-		Function: "lambda-test",
+func TestCreateForwarderV2ConfigFormat(t *testing.T) {
+	rawConfig, _ := json.Marshal(ConfigV2{
+		Function:      "lambda-test",
+		Configversion: aws.String("v2"),
 	})
 
 	entry := config.Entry{
@@ -34,11 +35,56 @@ func TestCreateForwarder(t *testing.T) {
 	}
 }
 
+func TestCreateForwarderV0ConfigFormat(t *testing.T) {
+	rawConfig, _ := json.Marshal(struct {
+		Type   string
+		Name   string
+		Target string
+	}{
+		Type:   "Lambda",
+		Name:   "lambda-test",
+		Target: "lambda-test",
+	})
+
+	entry := config.Entry{
+		Type:   "Lambda",
+		Name:   "lambda-test",
+		Config: (*json.RawMessage)(&rawConfig),
+	}
+	forwarder := CreateForwarder(entry)
+	if forwarder.Name() != entry.Name {
+		t.Errorf("wrong forwarder name, expected:%s, found: %s", entry.Name, forwarder.Name())
+	}
+}
+
+func TestCreateForwarderV0ConfigBadFormat(t *testing.T) {
+	rawConfig, _ := json.Marshal(struct {
+		Type   string `json:"type"`
+		name   string
+		target string
+	}{
+		Type:   "Lambda",
+		name:   "lambda-test",
+		target: "",
+	})
+
+	entry := config.Entry{
+		Type:   "Lambda",
+		Name:   "lambda-test",
+		Config: (*json.RawMessage)(&rawConfig),
+	}
+	forwarder := CreateForwarder(entry)
+	if forwarder != nil {
+		t.Errorf("Forwarder should not have been created:%s", forwarder.Name())
+	}
+}
+
 func TestPush(t *testing.T) {
 	functionName := "function1-test"
 
-	rawConfig, _ := json.Marshal(Config{
-		Function: functionName,
+	rawConfig, _ := json.Marshal(ConfigV2{
+		Function:      functionName,
+		Configversion: aws.String("v2"),
 	})
 
 	entry := config.Entry{Type: "Lambda",
