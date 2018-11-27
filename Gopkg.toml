@@ -37,6 +37,10 @@
   branch = "master"
   name = "github.com/streadway/amqp"
 
+[[override]]
+  name = "gopkg.in/fsnotify.v1"
+  source = "https://github.com/fsnotify/fsnotify/tree/v1.4.7"
+
 [prune]
   go-tests = true
   unused-packages = true

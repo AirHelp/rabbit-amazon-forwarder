@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/AirHelp/rabbit-amazon-forwarder/config"
+	"github.com/AirHelp/rabbit-amazon-forwarder/connector"
 	"github.com/AirHelp/rabbit-amazon-forwarder/consumer"
 	"github.com/AirHelp/rabbit-amazon-forwarder/forwarder"
 	"github.com/streadway/amqp"
@@ -24,11 +25,12 @@ const (
 
 // Consumer implementation or RabbitMQ consumer
 type Consumer struct {
-	name          string
-	ConnectionURL string
-	ExchangeName  string
-	QueueName     string
-	RoutingKeys   []string
+	name            string
+	ConnectionURL   string
+	ExchangeName    string
+	QueueName       string
+	RoutingKeys     []string
+	RabbitConnector connector.RabbitConnector
 }
 
 // parameters for starting consumer
@@ -42,13 +44,12 @@ type workerParams struct {
 }
 
 // CreateConsumer creates consumer from string map
-func CreateConsumer(entry config.RabbitEntry) consumer.Client {
-	// merge RoutingKey with RoutingKeys
-	if entry.RoutingKey != "" {
-		entry.RoutingKeys = append(entry.RoutingKeys, entry.RoutingKey)
-	}
-
-	return Consumer{entry.Name, entry.ConnectionURL, entry.ExchangeName, entry.QueueName, entry.RoutingKeys}
+func CreateConsumer(entry config.RabbitEntry, rabbitConnector connector.RabbitConnector) consumer.Client {
+    // merge RoutingKey with RoutingKeys
+    if entry.RoutingKey != "" {
+    	entry.RoutingKeys = append(entry.RoutingKeys, entry.RoutingKey)
+    }
+	return Consumer{entry.Name, entry.ConnectionURL, entry.ExchangeName, entry.QueueName, entry.RoutingKeys, rabbitConnector}
 }
 
 // Name consumer name
@@ -101,7 +102,7 @@ func (c Consumer) initRabbitMQ() (<-chan amqp.Delivery, *amqp.Connection, *amqp.
 }
 
 func (c Consumer) connect() (<-chan amqp.Delivery, *amqp.Connection, *amqp.Channel, error) {
-	conn, err := amqp.Dial(c.ConnectionURL)
+	conn, err := c.RabbitConnector.CreateConnection(c.ConnectionURL)
 	if err != nil {
 		return failOnError(err, "Failed to connect to RabbitMQ")
 	}
