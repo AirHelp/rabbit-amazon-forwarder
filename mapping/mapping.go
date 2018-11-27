@@ -2,9 +2,10 @@ package mapping
 
 import (
 	"encoding/json"
-	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/AirHelp/rabbit-amazon-forwarder/config"
 	"github.com/AirHelp/rabbit-amazon-forwarder/consumer"
@@ -33,6 +34,12 @@ type Helper interface {
 	createForwarder(entry config.AmazonEntry) forwarder.Client
 }
 
+// ConsumerForwarderMapping mapping for consumers and forwarders
+type ConsumerForwarderMapping struct {
+	Consumer  consumer.Client
+	Forwarder forwarder.Client
+}
+
 type helperImpl struct{}
 
 // New creates new mapping client
@@ -46,23 +53,23 @@ func New(helpers ...Helper) Client {
 }
 
 // Load loads mappings
-func (c Client) Load() (map[consumer.Client]forwarder.Client, error) {
-	consumerForwarderMap := make(map[consumer.Client]forwarder.Client)
+func (c Client) Load() ([]ConsumerForwarderMapping, error) {
+	var consumerForwarderMapping []ConsumerForwarderMapping
 	data, err := c.loadFile()
 	if err != nil {
-		return consumerForwarderMap, err
+		return consumerForwarderMapping, err
 	}
 	var pairsList pairs
 	if err = json.Unmarshal(data, &pairsList); err != nil {
-		return consumerForwarderMap, err
+		return consumerForwarderMapping, err
 	}
 	log.Info("Loading consumer - forwarder pairs")
 	for _, pair := range pairsList {
 		consumer := c.helper.createConsumer(pair.Source)
 		forwarder := c.helper.createForwarder(pair.Destination)
-		consumerForwarderMap[consumer] = forwarder
+		consumerForwarderMapping = append(consumerForwarderMapping, ConsumerForwarderMapping{consumer, forwarder})
 	}
-	return consumerForwarderMap, nil
+	return consumerForwarderMapping, nil
 }
 
 func (c Client) loadFile() ([]byte, error) {

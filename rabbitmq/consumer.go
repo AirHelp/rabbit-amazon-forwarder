@@ -3,8 +3,9 @@ package rabbitmq
 import (
 	"errors"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/AirHelp/rabbit-amazon-forwarder/config"
 	"github.com/AirHelp/rabbit-amazon-forwarder/consumer"
@@ -27,7 +28,7 @@ type Consumer struct {
 	ConnectionURL string
 	ExchangeName  string
 	QueueName     string
-	RoutingKey    string
+	RoutingKeys   []string
 }
 
 // parameters for starting consumer
@@ -42,7 +43,12 @@ type workerParams struct {
 
 // CreateConsumer creates consumer from string map
 func CreateConsumer(entry config.RabbitEntry) consumer.Client {
-	return Consumer{entry.Name, entry.ConnectionURL, entry.ExchangeName, entry.QueueName, entry.RoutingKey}
+	// merge RoutingKey with RoutingKeys
+	if entry.RoutingKey != "" {
+		entry.RoutingKeys = append(entry.RoutingKeys, entry.RoutingKey)
+	}
+
+	return Consumer{entry.Name, entry.ConnectionURL, entry.ExchangeName, entry.QueueName, entry.RoutingKeys}
 }
 
 // Name consumer name
@@ -132,8 +138,11 @@ func (c Consumer) setupExchangesAndQueues(conn *amqp.Connection, ch *amqp.Channe
 		}); err != nil {
 		return failOnError(err, "Failed to declare a queue:"+c.QueueName)
 	}
-	if err = ch.QueueBind(c.QueueName, c.RoutingKey, c.ExchangeName, false, nil); err != nil {
-		return failOnError(err, "Failed to bind a queue:"+c.QueueName)
+	// bind all of the routing keys
+	for _, routingKey := range c.RoutingKeys {
+		if err = ch.QueueBind(c.QueueName, routingKey, c.ExchangeName, false, nil); err != nil {
+			return failOnError(err, "Failed to bind a queue:"+c.QueueName)
+		}
 	}
 
 	msgs, err := ch.Consume(c.QueueName, c.Name(), false, false, false, false, nil)
