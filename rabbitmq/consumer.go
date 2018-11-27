@@ -29,7 +29,7 @@ type Consumer struct {
 	ConnectionURL   string
 	ExchangeName    string
 	QueueName       string
-	RoutingKey      string
+	RoutingKeys     []string
 	RabbitConnector connector.RabbitConnector
 }
 
@@ -45,7 +45,11 @@ type workerParams struct {
 
 // CreateConsumer creates consumer from string map
 func CreateConsumer(entry config.RabbitEntry, rabbitConnector connector.RabbitConnector) consumer.Client {
-	return Consumer{entry.Name, entry.ConnectionURL, entry.ExchangeName, entry.QueueName, entry.RoutingKey, rabbitConnector}
+    // merge RoutingKey with RoutingKeys
+    if entry.RoutingKey != "" {
+    	entry.RoutingKeys = append(entry.RoutingKeys, entry.RoutingKey)
+    }
+	return Consumer{entry.Name, entry.ConnectionURL, entry.ExchangeName, entry.QueueName, entry.RoutingKeys, rabbitConnector}
 }
 
 // Name consumer name
@@ -135,8 +139,11 @@ func (c Consumer) setupExchangesAndQueues(conn *amqp.Connection, ch *amqp.Channe
 		}); err != nil {
 		return failOnError(err, "Failed to declare a queue:"+c.QueueName)
 	}
-	if err = ch.QueueBind(c.QueueName, c.RoutingKey, c.ExchangeName, false, nil); err != nil {
-		return failOnError(err, "Failed to bind a queue:"+c.QueueName)
+	// bind all of the routing keys
+	for _, routingKey := range c.RoutingKeys {
+		if err = ch.QueueBind(c.QueueName, routingKey, c.ExchangeName, false, nil); err != nil {
+			return failOnError(err, "Failed to bind a queue:"+c.QueueName)
+		}
 	}
 
 	msgs, err := ch.Consume(c.QueueName, c.Name(), false, false, false, false, nil)

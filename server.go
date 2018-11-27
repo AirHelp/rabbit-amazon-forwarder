@@ -15,11 +15,11 @@ const (
 func main() {
 	createLogger()
 
-	consumerForwarderMap, err := mapping.New().Load()
+	consumerForwarderMapping, err := mapping.New().Load()
 	if err != nil {
 		log.WithField("error", err.Error()).Fatalf("Could not load consumer - forwarder pairs")
 	}
-	supervisor := supervisor.New(consumerForwarderMap)
+	supervisor := supervisor.New(consumerForwarderMapping)
 	if err := supervisor.Start(); err != nil {
 		log.WithField("error", err.Error()).Fatal("Could not start supervisor")
 	}

@@ -24,7 +24,7 @@ The list of RabbitMQ sources and corresponding AWS target resources are stored i
 
 ### Mapping file
 
-Sample of RabbitMQ -> SNS mapping file. All fields are required. Samples are located in [examples](https://github.com/AirHelp/rabbit-amazon-forwarder/examples) directory.
+Sample of RabbitMQ -> SNS mapping file. All fields are required. Samples are located in [examples](https://github.com/AirHelp/rabbit-amazon-forwarder/tree/master/examples) directory.
 ```json
 [
   {
@@ -34,7 +34,7 @@ Sample of RabbitMQ -> SNS mapping file. All fields are required. Samples are loc
       "connection" : "amqp://guest:guest@localhost:5672/",
       "topic" : "amq.topic",
       "queue" : "test-queue",
-      "routing" : "#"
+      "routingKeys" : ["#"]
     },
     "destination" : {
       "type" : "SNS",
