@@ -30,11 +30,11 @@ Sample of RabbitMQ -> SNS mapping file. All fields are required. Samples are loc
   {
     "source" : {
       "type" : "RabbitMQ",
-      "name" : "test-rabbit",
+      "name" : "rabbit_amazon_forwarder",
       "connection" : "amqp://guest:guest@localhost:5672/",
-      "topic" : "amq.topic",
-      "queue" : "test-queue",
-      "routingKeys" : ["#"]
+      "topic" : "event_bus",
+      "queue" : "rabbit_amazon_forwarder",
+      "routingKeys" : ["printservice.mapping.changed"]
     },
     "destination" : {
       "type" : "SNS",
