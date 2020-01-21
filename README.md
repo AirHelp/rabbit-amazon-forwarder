@@ -7,7 +7,7 @@ Application to forward messages from RabbitMQ to different Amazon services.
 Key features:
 
 * forwarding RabbitMQ message to AWS SNS topic
-* forwarding RabbitMQ message to AWS SNS queue
+* forwarding RabbitMQ message to AWS SQS queue
 * triggering AWS lambda function directly from RabbitMQ message
 * automatic RabbitMQ reconnect
 * message delivery assurance based on RabbitMQ persistency and AWS error handling
