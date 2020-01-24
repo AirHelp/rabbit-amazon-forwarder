@@ -9,9 +9,9 @@ services:
       - "${CERTS_DIR:-./certs}:/certs"
     environment:
       MAPPING_FILE: /config/mapping.json
-      AWS_REGION: ${AWS_REGION}
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_REGION: eu-west-2
+      AWS_ACCESS_KEY_ID: "AKIAWISJGQ6J3QMQA7HC"
+      AWS_SECRET_ACCESS_KEY: "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"
       CA_CERT_FILE: ${CA_CERT_FILE:- }
       CERT_FILE: ${CERT_FILE:- }
       KEY_FILE: ${KEY_FILE:- }

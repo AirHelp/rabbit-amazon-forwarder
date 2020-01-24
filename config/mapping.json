@@ -1,0 +1,17 @@
+[
+  {
+    "source" : {
+      "type" : "RabbitMQ",
+      "name" : "test-trainee-ui",
+      "connection" : "amqp://rabbitmq:732wC7epkmVnTCHU2n4C@localhost:5672/",
+      "topic" : "traineeui-test",
+      "queue" : "traineeui-test-queue",
+      "routingKeys" : ["#"]
+    },
+    "destination" : {
+      "type" : "SQS",
+      "name" : "traineeui-test-queue",
+      "target" : "https://sqs.eu-west-2.amazonaws.com/430723991443/traineeui-test-queue"
+    }
+  }
+]
