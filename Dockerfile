@@ -1,25 +1,37 @@
-FROM golang:1.11.0-alpine3.8 AS golang-build
+#syntax = docker/dockerfile:1.0-experimental
 
-RUN mkdir -p /go/src/github.com/AirHelp/rabbit-amazon-forwarder
+FROM golang:1.13-alpine AS builder
+
+RUN apk add --no-cache curl git openssh \
+ && adduser -D -g '' appuser
+
+COPY . /go/src/github.com/AirHelp/rabbit-amazon-forwarder
 WORKDIR /go/src/github.com/AirHelp/rabbit-amazon-forwarder
 
-RUN apk --no-cache add git && go get -u github.com/golang/dep/cmd/dep
+ENV GO111MODULE=on
+ENV GOOS=linux
+ENV GOARCH=amd64
+ENV CGO_ENABLED=0
 
-COPY Gopkg.toml Gopkg.lock ./
-RUN dep ensure -v -vendor-only
+RUN  go mod tidy \
+     && go mod verify \
+     && go mod vendor
 
-COPY . .
+RUN go build -ldflags="-w -s" -o /go/src/github.com/AirHelp/rabbit-amazon-forwarder/forwarder
 
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o rabbit-amazon-forwarder .
+FROM alpine
 
-FROM alpine:3.8
+RUN adduser -D -g '' appuser
 
-RUN mkdir -p /config
-RUN mkdir -p /certs
-RUN apk --update upgrade && \
-    apk add curl ca-certificates && \
-    update-ca-certificates && \
-    rm -rf /var/cache/apk/*
+WORKDIR /app
 
-COPY --from=golang-build /go/src/github.com/AirHelp/rabbit-amazon-forwarder/rabbit-amazon-forwarder /
-CMD ["/rabbit-amazon-forwarder"]
+ENV ENVIRONMENT="dev"
+
+RUN apk add --no-cache ca-certificates
+
+COPY --from=builder /go/src/github.com/AirHelp/rabbit-amazon-forwarder/forwarder /app/forwarder
+COPY ./config /app/config
+
+USER appuser
+
+ENTRYPOINT ["/app/forwarder"]
