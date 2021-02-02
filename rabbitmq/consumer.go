@@ -119,7 +119,9 @@ func (c Consumer) setupExchangesAndQueues(conn *amqp.Connection, ch *amqp.Channe
 	deadLetterExchangeName := c.QueueName + "-dead-letter"
 	deadLetterQueueName := c.QueueName + "-dead-letter"
 	// regular exchange
-	if err = ch.ExchangeDeclare(c.ExchangeName, c.ExchangeType, true, false, false, false, nil); err != nil {
+	//
+	// name, type, durable, autoDelete, internal, noWait bool, args Table
+	if err = ch.ExchangeDeclare(c.ExchangeName, c.ExchangeType, false, false, false, false, nil); err != nil {
 		return failOnError(err, "Failed to declare an exchange:"+c.ExchangeName)
 	}
 	// dead-letter-exchange
