@@ -93,9 +93,11 @@ type TlsRabbitConnector struct {
 
 func (c *TlsRabbitConnector) CreateConnection(connectionURL string) (*amqp.Connection, error) {
 	log.Info("Dialing in via TLS")
-	noCert := os.Getenv(config.NoCert)
-	if noCert == "1" {
-		log.Info("Skipping cert configuration because NoCert flag was set.")
+	noVerify := os.Getenv(config.NoVerify)
+	if noVerify == "1" {
+		log.Info("Skipping cert configuration because NoVerify flag was set.")
+		c.TlsConfig.MinVersion = tls.VersionTLS12
+		c.TlsConfig.InsecureSkipVerify = true
 	} else {
 		caCertFilePath := os.Getenv(config.CaCertFile)
 

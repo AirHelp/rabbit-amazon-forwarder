@@ -85,6 +85,9 @@ func (h helperImpl) createConsumer(entry config.RabbitEntry) consumer.Client {
 		"consumerName": entry.Name}).Info("Creating consumer")
 	switch entry.Type {
 	case rabbitmq.Type:
+		if entry.ConnectionURLEnvKey != "" {
+			entry.ConnectionURL = os.Getenv(entry.ConnectionURLEnvKey)
+		}
 		rabbitConnector := connector.CreateConnector(entry.ConnectionURL)
 		return rabbitmq.CreateConsumer(entry, rabbitConnector)
 	}
