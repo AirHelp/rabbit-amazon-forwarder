@@ -88,6 +88,9 @@ func (h helperImpl) createConsumer(entry config.RabbitEntry) consumer.Client {
 		if entry.ConnectionURLEnvKey != "" {
 			entry.ConnectionURL = os.Getenv(entry.ConnectionURLEnvKey)
 		}
+		if entry.ExchangeType == "" {
+			entry.ExchangeType = "topic"
+		}
 		rabbitConnector := connector.CreateConnector(entry.ConnectionURL)
 		return rabbitmq.CreateConsumer(entry, rabbitConnector)
 	}

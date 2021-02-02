@@ -16,6 +16,7 @@ type RabbitEntry struct {
 	ConnectionURL       string   `json:"connection"`
 	ConnectionURLEnvKey string   `json:"connection_env_key"`
 	ExchangeName        string   `json:"topic"`
+	ExchangeType        string   `json:"exchange_type"`
 	QueueName           string   `json:"queue"`
 	RoutingKey          string   `json:"routing"`
 	RoutingKeys         []string `json:"routingKeys"`

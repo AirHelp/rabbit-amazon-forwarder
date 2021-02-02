@@ -28,6 +28,7 @@ type Consumer struct {
 	name            string
 	ConnectionURL   string
 	ExchangeName    string
+	ExchangeType    string
 	QueueName       string
 	RoutingKeys     []string
 	RabbitConnector connector.RabbitConnector
@@ -45,11 +46,11 @@ type workerParams struct {
 
 // CreateConsumer creates consumer from string map
 func CreateConsumer(entry config.RabbitEntry, rabbitConnector connector.RabbitConnector) consumer.Client {
-    // merge RoutingKey with RoutingKeys
-    if entry.RoutingKey != "" {
-    	entry.RoutingKeys = append(entry.RoutingKeys, entry.RoutingKey)
-    }
-	return Consumer{entry.Name, entry.ConnectionURL, entry.ExchangeName, entry.QueueName, entry.RoutingKeys, rabbitConnector}
+	// merge RoutingKey with RoutingKeys
+	if entry.RoutingKey != "" {
+		entry.RoutingKeys = append(entry.RoutingKeys, entry.RoutingKey)
+	}
+	return Consumer{entry.Name, entry.ConnectionURL, entry.ExchangeName, entry.ExchangeType, entry.QueueName, entry.RoutingKeys, rabbitConnector}
 }
 
 // Name consumer name
@@ -118,7 +119,7 @@ func (c Consumer) setupExchangesAndQueues(conn *amqp.Connection, ch *amqp.Channe
 	deadLetterExchangeName := c.QueueName + "-dead-letter"
 	deadLetterQueueName := c.QueueName + "-dead-letter"
 	// regular exchange
-	if err = ch.ExchangeDeclare(c.ExchangeName, "topic", true, false, false, false, nil); err != nil {
+	if err = ch.ExchangeDeclare(c.ExchangeName, c.ExchangeType, true, false, false, false, nil); err != nil {
 		return failOnError(err, "Failed to declare an exchange:"+c.ExchangeName)
 	}
 	// dead-letter-exchange
