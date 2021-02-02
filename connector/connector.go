@@ -93,26 +93,31 @@ type TlsRabbitConnector struct {
 
 func (c *TlsRabbitConnector) CreateConnection(connectionURL string) (*amqp.Connection, error) {
 	log.Info("Dialing in via TLS")
-	caCertFilePath := os.Getenv(config.CaCertFile)
-
-	if ca, err := c.FileReader.ReadFile(caCertFilePath); err == nil {
-		c.TlsConfig.RootCAs = c.CertPoolMaker.NewCertPoolWithAppendedCa(ca)
+	noCert := os.Getenv(config.NoCert)
+	if noCert == "1" {
+		log.Info("Skipping cert configuration because NoCert flag was set.")
 	} else {
-		log.WithFields(log.Fields{
-			"error":           err.Error(),
-			config.CaCertFile: caCertFilePath}).Info("Error loading CA Cert file")
-		return nil, err
-	}
+		caCertFilePath := os.Getenv(config.CaCertFile)
 
-	certFilePath := os.Getenv(config.CertFile)
-	keyFilePath := os.Getenv(config.KeyFile)
-	if cert, err := c.KeyLoader.LoadKeyPair(certFilePath, keyFilePath); err == nil {
-		c.TlsConfig.Certificates = append(c.TlsConfig.Certificates, cert)
-	} else {
-		log.WithFields(log.Fields{
-			"error":         err.Error(),
-			config.CertFile: certFilePath,
-			config.KeyFile:  keyFilePath}).Info("Error loading client certificates")
+		if ca, err := c.FileReader.ReadFile(caCertFilePath); err == nil {
+			c.TlsConfig.RootCAs = c.CertPoolMaker.NewCertPoolWithAppendedCa(ca)
+		} else {
+			log.WithFields(log.Fields{
+				"error":           err.Error(),
+				config.CaCertFile: caCertFilePath}).Info("Error loading CA Cert file")
+			return nil, err
+		}
+
+		certFilePath := os.Getenv(config.CertFile)
+		keyFilePath := os.Getenv(config.KeyFile)
+		if cert, err := c.KeyLoader.LoadKeyPair(certFilePath, keyFilePath); err == nil {
+			c.TlsConfig.Certificates = append(c.TlsConfig.Certificates, cert)
+		} else {
+			log.WithFields(log.Fields{
+				"error":         err.Error(),
+				config.CertFile: certFilePath,
+				config.KeyFile:  keyFilePath}).Info("Error loading client certificates")
+		}
 	}
 	return c.TlsDialer.DialTLS(connectionURL, c.TlsConfig)
 }

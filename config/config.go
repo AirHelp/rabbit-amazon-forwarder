@@ -4,6 +4,7 @@ const (
 	// MappingFile mapping file environment variable
 	MappingFile = "MAPPING_FILE"
 	CaCertFile  = "CA_CERT_FILE"
+	NoCert      = "NO_CERT"
 	CertFile    = "CERT_FILE"
 	KeyFile     = "KEY_FILE"
 )
