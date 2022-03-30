@@ -56,13 +56,39 @@ func New(helpers ...Helper) Client {
 // Load loads mappings
 func (c Client) Load() ([]ConsumerForwarderMapping, error) {
 	var consumerForwarderMapping []ConsumerForwarderMapping
-	data, err := c.loadFile()
-	if err != nil {
-		return consumerForwarderMapping, err
-	}
-	var pairsList pairs
-	if err = json.Unmarshal(data, &pairsList); err != nil {
-		return consumerForwarderMapping, err
+	runtimeLambda = os.Getenv("RUNTIME_LAMBDA_ARN")
+	log.Info("Runtime Lambda ARN: ", runtimeLambda)
+	pairsList := pairs{
+		{
+			Source: config.RabbitEntry{
+				Type: rabbitmq.Type,
+				Name: "runtime-requests",
+				ConnectionURLEnvKey: "CELERY_BROKER_URL",
+				Topic: "api.internal_messages",
+				ExchangeType: "fanout",
+				Queue: "RUNTIME_REQUESTS"
+			},
+			Destination: config.AmazonEntry{
+				Type: lambda.Type,
+				Name: "runtime-lambda",
+				Target: runtimeLambda,
+			},
+		}
+		{
+			Source: config.RabbitEntry{
+				Type: rabbitmq.Type,
+				Name: "audit-messages",
+				ConnectionURLEnvKey: "CELERY_BROKER_URL",
+				Topic: "api.audit_messages",
+				ExchangeType: "fanout",
+				Queue: "AUDIT_MESSAGES"
+			},
+			Destination: config.AmazonEntry{
+				Type: lambda.Type,
+				Name: "runtime-lambda",
+				Target: runtimeLambda,
+			},
+		}
 	}
 	log.Info("Loading consumer - forwarder pairs")
 	for _, pair := range pairsList {
@@ -71,12 +97,6 @@ func (c Client) Load() ([]ConsumerForwarderMapping, error) {
 		consumerForwarderMapping = append(consumerForwarderMapping, ConsumerForwarderMapping{consumer, forwarder})
 	}
 	return consumerForwarderMapping, nil
-}
-
-func (c Client) loadFile() ([]byte, error) {
-	filePath := os.Getenv(config.MappingFile)
-	log.WithField("mappingFile", filePath).Info("Loading mapping file")
-	return ioutil.ReadFile(filePath)
 }
 
 func (h helperImpl) createConsumer(entry config.RabbitEntry) consumer.Client {
