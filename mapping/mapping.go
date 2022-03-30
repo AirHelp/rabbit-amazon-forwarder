@@ -1,20 +1,18 @@
 package mapping
 
 import (
-	"encoding/json"
-	"io/ioutil"
 	"os"
 
-	"github.com/AirHelp/rabbit-amazon-forwarder/connector"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/AirHelp/rabbit-amazon-forwarder/config"
-	"github.com/AirHelp/rabbit-amazon-forwarder/consumer"
-	"github.com/AirHelp/rabbit-amazon-forwarder/forwarder"
-	"github.com/AirHelp/rabbit-amazon-forwarder/lambda"
-	"github.com/AirHelp/rabbit-amazon-forwarder/rabbitmq"
-	"github.com/AirHelp/rabbit-amazon-forwarder/sns"
-	"github.com/AirHelp/rabbit-amazon-forwarder/sqs"
+	"github.com/symopsio/rabbit-amazon-forwarder/config"
+	"github.com/symopsio/rabbit-amazon-forwarder/connector"
+	"github.com/symopsio/rabbit-amazon-forwarder/consumer"
+	"github.com/symopsio/rabbit-amazon-forwarder/forwarder"
+	"github.com/symopsio/rabbit-amazon-forwarder/lambda"
+	"github.com/symopsio/rabbit-amazon-forwarder/rabbitmq"
+	"github.com/symopsio/rabbit-amazon-forwarder/sns"
+	"github.com/symopsio/rabbit-amazon-forwarder/sqs"
 )
 
 type pairs []pair
@@ -29,7 +27,7 @@ type Client struct {
 	helper Helper
 }
 
-// Helper interface for creating consumers and forwaders
+// Helper interface for creating consumers and forwarders
 type Helper interface {
 	createConsumer(entry config.RabbitEntry) consumer.Client
 	createForwarder(entry config.AmazonEntry) forwarder.Client
@@ -56,39 +54,39 @@ func New(helpers ...Helper) Client {
 // Load loads mappings
 func (c Client) Load() ([]ConsumerForwarderMapping, error) {
 	var consumerForwarderMapping []ConsumerForwarderMapping
-	runtimeLambda = os.Getenv("RUNTIME_LAMBDA_ARN")
+	runtimeLambda := os.Getenv("RUNTIME_LAMBDA_ARN")
 	log.Info("Runtime Lambda ARN: ", runtimeLambda)
 	pairsList := pairs{
-		{
+		pair{
 			Source: config.RabbitEntry{
-				Type: rabbitmq.Type,
-				Name: "runtime-requests",
+				Type:                rabbitmq.Type,
+				Name:                "runtime-requests",
 				ConnectionURLEnvKey: "CELERY_BROKER_URL",
-				Topic: "api.internal_messages",
-				ExchangeType: "fanout",
-				Queue: "RUNTIME_REQUESTS"
+				ExchangeName:        "api.internal_messages",
+				ExchangeType:        "fanout",
+				QueueName:           "RUNTIME_REQUESTS",
 			},
 			Destination: config.AmazonEntry{
-				Type: lambda.Type,
-				Name: "runtime-lambda",
+				Type:   lambda.Type,
+				Name:   "runtime-lambda",
 				Target: runtimeLambda,
 			},
-		}
-		{
+		},
+		pair{
 			Source: config.RabbitEntry{
-				Type: rabbitmq.Type,
-				Name: "audit-messages",
+				Type:                rabbitmq.Type,
+				Name:                "audit-messages",
 				ConnectionURLEnvKey: "CELERY_BROKER_URL",
-				Topic: "api.audit_messages",
-				ExchangeType: "fanout",
-				Queue: "AUDIT_MESSAGES"
+				ExchangeName:        "api.audit_messages",
+				ExchangeType:        "fanout",
+				QueueName:           "AUDIT_MESSAGES",
 			},
 			Destination: config.AmazonEntry{
-				Type: lambda.Type,
-				Name: "runtime-lambda",
+				Type:   lambda.Type,
+				Name:   "runtime-lambda",
 				Target: runtimeLambda,
 			},
-		}
+		},
 	}
 	log.Info("Loading consumer - forwarder pairs")
 	for _, pair := range pairsList {

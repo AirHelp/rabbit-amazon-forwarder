@@ -2,13 +2,15 @@ package lambda
 
 import (
 	"errors"
-	"github.com/AirHelp/rabbit-amazon-forwarder/config"
-	"github.com/AirHelp/rabbit-amazon-forwarder/forwarder"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/lambda"
 	"github.com/aws/aws-sdk-go/service/lambda/lambdaiface"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/symopsio/rabbit-amazon-forwarder/config"
+	"github.com/symopsio/rabbit-amazon-forwarder/forwarder"
 )
 
 const (

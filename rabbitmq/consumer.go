@@ -6,12 +6,12 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-
-	"github.com/AirHelp/rabbit-amazon-forwarder/config"
-	"github.com/AirHelp/rabbit-amazon-forwarder/connector"
-	"github.com/AirHelp/rabbit-amazon-forwarder/consumer"
-	"github.com/AirHelp/rabbit-amazon-forwarder/forwarder"
 	"github.com/streadway/amqp"
+
+	"github.com/symopsio/rabbit-amazon-forwarder/config"
+	"github.com/symopsio/rabbit-amazon-forwarder/connector"
+	"github.com/symopsio/rabbit-amazon-forwarder/consumer"
+	"github.com/symopsio/rabbit-amazon-forwarder/forwarder"
 )
 
 const (
