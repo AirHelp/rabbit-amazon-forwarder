@@ -1,7 +1,7 @@
 FROM golang:1.11.0-alpine3.8 AS golang-build
 
-RUN mkdir -p /go/src/github.com/AirHelp/rabbit-amazon-forwarder
-WORKDIR /go/src/github.com/AirHelp/rabbit-amazon-forwarder
+RUN mkdir -p /go/src/github.com/symopsio/rabbit-amazon-forwarder
+WORKDIR /go/src/github.com/symopsio/rabbit-amazon-forwarder
 
 RUN apk --no-cache add git && go get -u github.com/golang/dep/cmd/dep
 
@@ -21,5 +21,5 @@ RUN apk --update upgrade && \
     update-ca-certificates && \
     rm -rf /var/cache/apk/*
 
-COPY --from=golang-build /go/src/github.com/AirHelp/rabbit-amazon-forwarder/rabbit-amazon-forwarder /
+COPY --from=golang-build /go/src/github.com/symopsio/rabbit-amazon-forwarder/rabbit-amazon-forwarder /
 CMD ["/rabbit-amazon-forwarder"]
