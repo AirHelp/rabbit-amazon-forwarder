@@ -1,18 +1,16 @@
-FROM golang:1.11.0-alpine3.8 AS golang-build
+FROM golang:1.18-alpine AS golang-build
 
 RUN mkdir -p /go/src/github.com/AirHelp/rabbit-amazon-forwarder
 WORKDIR /go/src/github.com/AirHelp/rabbit-amazon-forwarder
 
-RUN apk --no-cache add git && go get -u github.com/golang/dep/cmd/dep
-
-COPY Gopkg.toml Gopkg.lock ./
-RUN dep ensure -v -vendor-only
+RUN apk --no-cache add git
 
 COPY . .
+RUN go mod tidy -go=1.18 -compat=1.18
 
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o rabbit-amazon-forwarder .
 
-FROM alpine:3.8
+FROM alpine
 
 RUN mkdir -p /config
 RUN mkdir -p /certs

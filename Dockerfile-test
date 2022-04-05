@@ -1,10 +1,10 @@
-FROM golang:1.11.0-alpine3.8
+FROM golang:1.18-alpine
 
 WORKDIR /go/src/github.com/AirHelp/rabbit-amazon-forwarder
 
-RUN apk --no-cache add git gcc musl-dev && go get -u github.com/golang/dep/cmd/dep
+RUN apk --no-cache add git gcc musl-dev
 
-COPY Gopkg.toml Gopkg.lock ./
-RUN dep ensure -v -vendor-only
+COPY go.mod go.sum ./
+RUN go mod tidy -go=1.18 -compat=1.18
 
 COPY . .
