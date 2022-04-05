@@ -106,7 +106,7 @@ func (c *TlsRabbitConnector) CreateConnection(connectionURL string) (*amqp.Conne
 
 	certFilePath := os.Getenv(config.CertFile)
 	keyFilePath := os.Getenv(config.KeyFile)
-	if cert, err := c.KeyLoader.LoadKeyPair(certFilePath, keyFilePath); err == nil {
+	if _, err := c.KeyLoader.LoadKeyPair(certFilePath, keyFilePath); err == nil {
 		c.TlsConfig.Certificates = append(c.TlsConfig.Certificates, cert)
 	} else {
 		log.WithFields(log.Fields{
