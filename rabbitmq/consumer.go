@@ -45,10 +45,10 @@ type workerParams struct {
 
 // CreateConsumer creates consumer from string map
 func CreateConsumer(entry config.RabbitEntry, rabbitConnector connector.RabbitConnector) consumer.Client {
-    // merge RoutingKey with RoutingKeys
-    if entry.RoutingKey != "" {
-    	entry.RoutingKeys = append(entry.RoutingKeys, entry.RoutingKey)
-    }
+	// merge RoutingKey with RoutingKeys
+	if entry.RoutingKey != "" {
+		entry.RoutingKeys = append(entry.RoutingKeys, entry.RoutingKey)
+	}
 	return Consumer{entry.Name, entry.ConnectionURL, entry.ExchangeName, entry.QueueName, entry.RoutingKeys, rabbitConnector}
 }
 
